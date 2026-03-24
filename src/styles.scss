@@ -1,0 +1,41 @@
+/* You can add global styles to this file, and also import other style files */
+
+html,
+body {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	font-family: 'Inter', Roboto, 'Helvetica Neue', sans-serif;
+	color: #111827;
+	background: #f8fafc;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+h1,
+h2,
+h3 {
+	margin: 0;
+}
+
+:root {
+	--rms-radius-lg: 18px;
+	--rms-radius-md: 12px;
+	--rms-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.mat-mdc-card {
+	border-radius: var(--rms-radius-lg) !important;
+}
+
+.mat-mdc-button-base {
+	border-radius: var(--rms-radius-md) !important;
+}
+
+.mat-mdc-form-field-subscript-wrapper {
+	display: none;
+}
