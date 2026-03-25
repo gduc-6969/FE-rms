@@ -1,3 +1,24 @@
+export interface ApiResponse<T> {
+  success: boolean;
+  status: number;
+  message: string;
+  data: T;
+  errorCode?: string;
+  errors?: Record<string, string>;
+  timestamp?: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  tokenType: string;
+  user: {
+    id: number;
+    email: string;
+    fullName: string;
+    role: string;
+  };
+}
+
 export type UserRole = 'admin' | 'staff' | 'customer';
 
 export interface UserAccount {

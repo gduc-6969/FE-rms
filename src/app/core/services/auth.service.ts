@@ -1,5 +1,7 @@
-import { Injectable, signal } from '@angular/core';
-import { UserAccount, UserRole } from '../models/app.models';
+import { Injectable, signal, inject } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, throwError, tap } from 'rxjs';
+import { UserRole, ApiResponse, AuthResponse } from '../models/app.models';
 
 const TOKEN_KEY = 'rms-token';
 const ROLE_KEY = 'rms-role';
@@ -9,32 +11,39 @@ const USER_KEY = 'rms-user';
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly accounts: UserAccount[] = [
-    { email: 'admin@restaurant.com', password: 'password123', role: 'admin', fullName: 'Admin User' },
-    { email: 'waiter@restaurant.com', password: 'password123', role: 'staff', fullName: 'Waiter User' },
-    { email: 'cashier@restaurant.com', password: 'password123', role: 'staff', fullName: 'Cashier User' },
-    { email: 'staff@restaurant.com', password: 'password123', role: 'staff', fullName: 'Staff User' },
-    { email: 'customer@restaurant.com', password: 'password123', role: 'customer', fullName: 'Customer User' }
-  ];
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = 'http://localhost:8082/api/v1/auth';
 
   readonly role = signal<UserRole | null>((localStorage.getItem(ROLE_KEY) as UserRole | null) ?? null);
   readonly fullName = signal<string | null>(localStorage.getItem(USER_KEY));
 
-  login(email: string, password: string): UserRole | null {
-    const account = this.accounts.find(item => item.email === email && item.password === password);
+  private mapBackendRoleToUserRole(backendRole: string): UserRole {
+    if (backendRole === 'QUAN_LY') return 'admin';
+    if (backendRole === 'NHAN_VIEN') return 'staff';
+    return 'customer';
+  }
 
-    if (!account) {
-      return null;
-    }
+  login(credentials: { email: string; password: string }): Observable<ApiResponse<AuthResponse>> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/login`, credentials).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          const mappedRole = this.mapBackendRoleToUserRole(response.data.user.role);
+          localStorage.setItem(TOKEN_KEY, response.data.accessToken);
+          localStorage.setItem(ROLE_KEY, mappedRole);
+          localStorage.setItem(USER_KEY, response.data.user.fullName);
 
-    localStorage.setItem(TOKEN_KEY, `mock-token-${account.role}`);
-    localStorage.setItem(ROLE_KEY, account.role);
-    localStorage.setItem(USER_KEY, account.fullName);
+          this.role.set(mappedRole);
+          this.fullName.set(response.data.user.fullName);
+        }
+      }),
+      catchError(this.handleError)
+    );
+  }
 
-    this.role.set(account.role);
-    this.fullName.set(account.fullName);
-
-    return account.role;
+  register(payload: { name: string; email: string; password: string }): Observable<ApiResponse<AuthResponse>> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/register`, payload).pipe(
+      catchError(this.handleError)
+    );
   }
 
   logout(): void {
@@ -48,4 +57,18 @@ export class AuthService {
   isAuthenticated(): boolean {
     return !!localStorage.getItem(TOKEN_KEY);
   }
+
+  private handleError(error: HttpErrorResponse) {
+    let errorRes = error.error;
+    if (!errorRes || !errorRes.errorCode) {
+      errorRes = {
+        success: false,
+        status: error.status,
+        message: 'Lỗi hệ thống. Vui lòng thử lại!',
+        errorCode: 'UNKNOWN_ERROR'
+      };
+    }
+    return throwError(() => errorRes);
+  }
 }
+
