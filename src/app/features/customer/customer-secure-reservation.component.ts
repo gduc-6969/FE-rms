@@ -23,6 +23,8 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
       <mat-card class="secure-card">
         <mat-card-content>
           @if (draft()) {
+            <h3 class="summary-title">Secure Reservation Summary</h3>
+
             <div class="info-block">
               <span>DATE & TIME</span>
               <strong>{{ draft()!.date }}</strong>
@@ -52,7 +54,7 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
             </div>
 
             <button class="secure-btn" mat-flat-button type="button" (click)="submitReservation()">
-              SECURE RESERVATION
+              XÁC NHẬN ĐẶT BÀN
             </button>
           } @else {
             <div class="empty-state">
@@ -89,6 +91,11 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
 
       .secure-card {
         border-radius: 22px;
+      }
+
+      .summary-title {
+        margin: 0 0 12px;
+        font-size: 18px;
       }
 
       .info-block {
@@ -148,6 +155,7 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
         border-radius: 999px;
         min-height: 52px;
         background: #1f2937;
+        color: #ffffff;
         letter-spacing: 1.5px;
       }
 

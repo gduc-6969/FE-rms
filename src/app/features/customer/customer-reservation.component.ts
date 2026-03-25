@@ -232,6 +232,7 @@ import {
         min-width: 280px;
         border-radius: 999px;
         background: #1f2937;
+        color: #ffffff;
       }
     `
   ],
