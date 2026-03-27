@@ -18,18 +18,23 @@ import { UserRole } from '../../core/models/app.models';
   template: `
     <div class="login-page">
       <div class="login-card">
-        <div class="brand-row">
-          <div class="brand-icon"><mat-icon>bar_chart</mat-icon></div>
-          <div class="brand-name">Gastros</div>
+        <div class="brand-block">
+          <div class="brand-row">
+            <img
+              class="brand-logo-image"
+              src="/assets/vecteezy_steak-creative-icon-design_15969625-removebg-preview.png"
+              alt="Desinare steak logo"
+            />
+            <div class="brand-name">Desinare</div>
+          </div>
+          <div class="brand-stars" aria-hidden="true">
+            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+          </div>
+          <p class="brand-nickname">"Take a seat, for a classic treat."</p>
         </div>
 
         @if (mode() === 'login') {
-          <div class="header">
-            <h1>Welcome Back</h1>
-            <p>ENTER YOUR CREDENTIALS TO CONTINUE</p>
-          </div>
-
-          <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="onLogin()">
+          <form class="auth-form login-form" [formGroup]="loginForm" (ngSubmit)="onLogin()">
             <label class="field-label" for="login-email">EMAIL OR PHONE NUMBER</label>
             <div class="input-shell">
               <mat-icon>mail_outline</mat-icon>
@@ -67,48 +72,15 @@ import { UserRole } from '../../core/models/app.models';
               <mat-icon>arrow_forward</mat-icon>
             </button>
 
-            <div class="quick-login">
-              <p>QUICK DEMO ACCESS</p>
-              <div class="quick-buttons">
-                <button type="button" (click)="quickLogin('customer')">Customer</button>
-                <button type="button" (click)="quickLogin('staff')">Staff</button>
-                <button type="button" (click)="quickLogin('admin')">Manager</button>
-              </div>
-            </div>
-
             <div class="toggle-mode">
-              <span>New to Gastros?</span>
+              <span>New to Desinare?</span>
               <button class="text-action" type="button" (click)="toggleMode()">Create an account</button>
             </div>
           </form>
         } @else {
-          <div class="header">
-            <h1>Create Account</h1>
-            <p>REGISTER TO ACCESS THE RESTAURANT SYSTEM</p>
-          </div>
+    
 
-          <form class="auth-form" [formGroup]="registerForm" (ngSubmit)="onRegister()">
-            <div class="role-tabs" role="tablist" aria-label="Register role">
-              <button
-                class="role-tab"
-                [class.active]="registerRole() === 'customer'"
-                type="button"
-                (click)="setRegisterRole('customer')"
-              >
-                <mat-icon>person_outline</mat-icon>
-                <span>CUSTOMER</span>
-              </button>
-              <button
-                class="role-tab"
-                [class.active]="registerRole() === 'staff'"
-                type="button"
-                (click)="setRegisterRole('staff')"
-              >
-                <mat-icon>groups_2</mat-icon>
-                <span>STAFF</span>
-              </button>
-            </div>
-
+          <form class="auth-form register-form" [formGroup]="registerForm" (ngSubmit)="onRegister()">
             <label class="field-label" for="register-name">FULL NAME</label>
             <div class="input-shell">
               <mat-icon>person_outline</mat-icon>
@@ -132,13 +104,7 @@ import { UserRole } from '../../core/models/app.models';
             }
 
             <button class="submit-btn" type="submit" [disabled]="registerForm.invalid || isLoading()">
-              {{
-                isLoading()
-                  ? 'CREATING...'
-                  : registerRole() === 'staff'
-                    ? 'REGISTER AS STAFF'
-                    : 'REGISTER AS CUSTOMER'
-              }}
+              {{ isLoading() ? 'CREATING...' : 'REGISTER' }}
               <mat-icon>arrow_forward</mat-icon>
             </button>
             <div class="toggle-mode">
@@ -152,22 +118,78 @@ import { UserRole } from '../../core/models/app.models';
   `,
   styles: [
     `
+      :host {
+        --v-cream: #181617;
+        --v-parchment: #171416;
+        --v-sepia: #9f8864;
+        --v-brass: #b3905f;
+        --v-burgundy: #5f2236;
+        --v-forest: #465548;
+        --v-ink: #fff4e4;
+        --v-muted: #c8baa4;
+      }
+
       .login-page {
         min-height: 100dvh;
+        height: 100dvh;
         display: grid;
         place-items: center;
-        padding: 24px 16px;
-        background: #f3f4f6;
+        padding: clamp(8px, 2vh, 16px) 12px;
+        background:
+          linear-gradient(145deg, rgba(10, 10, 12, 0.93) 0%, rgba(21, 17, 18, 0.91) 62%, rgba(19, 13, 16, 0.94) 100%),
+          url('/assets/vecteezy_vector-vintage-fast-food-seamless-pattern-hand-drawn_14469007.jpg');
+        background-position: center;
+        background-size: cover;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .login-page::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at 25% 10%, rgba(179, 144, 95, 0.14), transparent 34%),
+          radial-gradient(circle at 85% 86%, rgba(95, 34, 54, 0.22), transparent 36%);
+      }
+
+      .login-page::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          repeating-linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.012) 0,
+            rgba(255, 255, 255, 0.012) 1px,
+            rgba(0, 0, 0, 0.018) 1px,
+            rgba(0, 0, 0, 0.018) 3px
+          ),
+          repeating-linear-gradient(
+            0deg,
+            rgba(255, 255, 255, 0.008) 0,
+            rgba(255, 255, 255, 0.008) 2px,
+            rgba(0, 0, 0, 0.014) 2px,
+            rgba(0, 0, 0, 0.014) 4px
+          );
+        opacity: 0.24;
       }
 
       .login-card {
-        width: min(100%, 560px);
+        width: min(100%, 520px);
         box-sizing: border-box;
-        border-radius: 32px;
-        background: #f3f4f6;
-        padding: 6px;
-        font-family: 'Inter', Roboto, 'Helvetica Neue', sans-serif;
+        border-radius: 0;
+        background: linear-gradient(180deg, rgba(23, 20, 21, 0.96) 0%, rgba(16, 14, 15, 0.96) 100%);
+        border: 1px solid rgba(179, 144, 95, 0.44);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(251, 226, 178, 0.04);
+        padding: 20px 20px 18px;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
         font-size: 16px;
+        color: var(--v-ink);
+        position: relative;
+        z-index: 1;
       }
 
       .brand-row {
@@ -175,121 +197,139 @@ import { UserRole } from '../../core/models/app.models';
         align-items: center;
         justify-content: center;
         gap: 12px;
-        margin: 8px 0 32px;
+        margin: 4px 0 8px;
       }
 
-      .brand-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        background: #ff6a2c;
-        color: #ffffff;
-        display: grid;
-        place-items: center;
+      .brand-block {
+        text-align: center;
+        margin-bottom: 12px;
       }
 
-      .brand-icon mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+      .brand-logo-image {
+        width: 52px;
+        height: 52px;
+        object-fit: contain;
+        filter: none;
       }
 
       .brand-name {
-        font-size: 44px;
-        line-height: 1;
-        font-weight: 800;
-        color: #23252f;
+        font-family: 'Playfair Display', 'Times New Roman', serif;
+        font-size: clamp(42px, 6.2vw, 58px);
+        line-height: 1.08;
+        color: #fff8eb;
+        letter-spacing: 0.01em;
+        font-weight: 700;
+        font-style: italic;
+        text-shadow: 0 0 10px rgba(247, 238, 223, 0.22), 0 0 20px rgba(109, 73, 31, 0.2);
+      }
+
+      .brand-stars {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin: 0 0 6px;
+        color: #c8a46c;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+      }
+
+      .brand-nickname {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.25;
+        color: #fff0da;
+        font-style: italic;
+        letter-spacing: 0.02em;
+        text-shadow: 0 0 8px rgba(240, 228, 206, 0.16);
+      }
+
+      .header {
+        position: relative;
+        margin-bottom: 6px;
+      }
+
+      .header::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -12px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(179, 144, 95, 0.52), transparent);
       }
 
       .header h1 {
+        font-family: 'Playfair Display', 'Times New Roman', serif;
         font-size: clamp(42px, 7vw, 56px);
-        font-weight: 900;
-        color: #23252f;
+        font-weight: 700;
+        color: #fff2dc;
+        letter-spacing: 0.01em;
       }
 
       .header p {
-        margin: 10px 0 26px;
+        margin: 8px 0 22px;
         font-size: 16px;
         letter-spacing: 0.11em;
-        color: #687282;
-        font-weight: 700;
+        color: #d5c7b0;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       .auth-form {
-        display: grid;
+        display: flex;
+        flex-direction: column;
         gap: 10px;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+      }
+
+      .login-form {
+        min-height: 430px;
+      }
+
+      .register-form {
+        min-height: 0;
       }
 
       .field-label {
-        margin-top: 8px;
-        color: #8b95a5;
-        font-size: 16px;
-        letter-spacing: 0.12em;
-        font-weight: 800;
-      }
-
-      .role-tabs {
-        margin: 6px 0 6px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .role-tab {
-        min-height: 82px;
-        border-radius: 18px;
-        border: 1px solid #e5e7eb;
-        background: #f8fafc;
-        color: #98a2b3;
-        font-size: 16px;
-        letter-spacing: 0.1em;
-        font-weight: 800;
-        display: grid;
-        place-items: center;
-        gap: 4px;
-        cursor: pointer;
-      }
-
-      .role-tab mat-icon {
-        font-size: 21px;
-        width: 21px;
-        height: 21px;
-      }
-
-      .role-tab.active {
-        border-color: #ff6a2c;
-        background: #fef6f0;
-        color: #ff6a2c;
+        margin-top: 2px;
+        color: #e5d2b2;
+        font-size: 12px;
+        letter-spacing: 0.11em;
+        font-weight: 600;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       .input-shell {
-        border: 1px solid #e5e7eb;
-        border-radius: 24px;
-        min-height: 70px;
-        padding: 0 18px;
+        border: 1px solid rgba(179, 144, 95, 0.52);
+        border-radius: 0;
+        min-height: 56px;
+        padding: 0 14px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        background: #ffffff;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        gap: 10px;
+        background: #1a1717;
+        box-shadow: inset 0 0 0 1px rgba(246, 220, 171, 0.05);
       }
 
-      .input-shell mat-icon {
-        color: #98a2b3;
+      .input-shell mat-icon,
+      .icon-btn mat-icon {
+        color: #c39b64;
       }
 
       .input-shell input {
         border: none;
         outline: none;
         width: 100%;
-        font-size: 16px;
-        font-weight: 600;
-        color: #1f2937;
+        font-size: 15px;
+        font-weight: 500;
+        color: #fff1dc;
         background: transparent;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       .input-shell input::placeholder {
-        color: #9ca3af;
+        color: #bcab93;
       }
 
       .icon-btn {
@@ -301,56 +341,65 @@ import { UserRole } from '../../core/models/app.models';
         cursor: pointer;
       }
 
-      .icon-btn mat-icon {
-        color: #98a2b3;
-      }
-
       .row-options {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 2px;
+        margin-top: 0;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       .remember-me {
         display: flex;
         align-items: center;
         gap: 10px;
-        color: #6b7280;
-        font-weight: 600;
+        color: #e0ceae;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       .remember-me input {
         width: 20px;
         height: 20px;
-        accent-color: #2e3038;
+        accent-color: #c39b64;
       }
 
       .text-action {
         border: none;
         background: transparent;
-        color: #ff6a2c;
-        font-size: 16px;
-        font-weight: 700;
+        color: #f0c88a;
+        font-size: 14px;
+        font-weight: 600;
         cursor: pointer;
+        text-decoration: underline;
+        text-decoration-color: rgba(214, 170, 108, 0.45);
+        text-underline-offset: 4px;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       .submit-btn {
-        margin-top: 8px;
-        min-height: 78px;
-        border: none;
-        border-radius: 24px;
-        background: #2e3038;
-        color: #ffffff;
-        font-size: 16px;
-        letter-spacing: 0.12em;
-        font-weight: 800;
+        margin-top: 12px;
+        min-height: 62px;
+        border: 1px solid rgba(201, 167, 104, 0.66);
+        border-radius: 0;
+        background: linear-gradient(180deg, #6a273b 0%, #4b1a2a 100%);
+        color: #fff4e3;
+        font-size: 15px;
+        letter-spacing: 0.13em;
+        font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        box-shadow: 0 12px 20px rgba(15, 23, 42, 0.12);
+        gap: 10px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(242, 212, 156, 0.1);
+        text-transform: uppercase;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+      }
+
+      .login-form .submit-btn {
+        margin-top: auto;
       }
 
       .submit-btn:disabled {
@@ -359,103 +408,70 @@ import { UserRole } from '../../core/models/app.models';
       }
 
       .submit-btn mat-icon {
-        font-size: 30px;
-        width: 30px;
-        height: 30px;
+        font-size: 26px;
+        width: 26px;
+        height: 26px;
       }
 
       .error {
-        color: #dc2626;
+        color: #f2a0a4;
         margin: 0;
         text-align: left;
-        font-size: 16px;
-        font-weight: 700;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       .toggle-mode {
-        border-top: 1px solid #d5d9e1;
-        margin-top: 30px;
-        padding-top: 20px;
+        border-top: 1px solid rgba(179, 144, 95, 0.24);
+        margin-top: 14px;
+        padding-top: 12px;
         text-align: center;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        font-size: 16px;
-        color: #687282;
-        font-weight: 700;
-      }
-
-      .quick-login {
-        margin-top: 14px;
-      }
-
-      .quick-login p {
-        margin: 8px 0 14px;
-        color: #8b95a5;
-        text-align: center;
-        font-size: 16px;
-        letter-spacing: 0.12em;
-        font-weight: 800;
-      }
-
-      .quick-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-      }
-
-      .quick-buttons button {
-        min-width: 96px;
-        height: 34px;
-        border-radius: 999px;
-        border: 1px solid #d5d9e1;
-        background: #f8fafc;
-        color: #687282;
-        font-weight: 700;
-        cursor: pointer;
+        gap: 10px;
+        font-size: 14px;
+        color: #d5c5ab;
+        font-weight: 600;
+        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       @media (max-width: 640px) {
         .login-card {
-          width: min(100%, 460px);
+          width: min(100%, 430px);
+          padding: 14px;
+        }
+
+        .login-form {
+          min-height: 0;
         }
 
         .brand-name {
-          font-size: 34px;
+          font-size: clamp(34px, 10vw, 46px);
+          line-height: 1.06;
+          letter-spacing: 0.01em;
+        }
+
+        .brand-nickname {
+          font-size: 12px;
         }
 
         .header h1 {
-          font-size: clamp(30px, 9vw, 44px);
-        }
-
-        .header p {
-          font-size: 16px;
+          font-size: clamp(34px, 9vw, 46px);
         }
 
         .input-shell {
-          min-height: 58px;
-        }
-
-        .input-shell input {
-          font-size: 16px;
+          min-height: 52px;
         }
 
         .submit-btn {
-          min-height: 58px;
-          font-size: 16px;
+          min-height: 56px;
+          margin-top: 10px;
         }
 
-        .text-action {
-          font-size: 16px;
-        }
-
-        .error {
-          font-size: 16px;
-        }
-
+        .row-options,
         .toggle-mode {
-          font-size: 16px;
           flex-wrap: wrap;
         }
       }
@@ -486,17 +502,11 @@ export class LoginPageComponent {
   });
 
   readonly showPassword = signal(false);
-  readonly registerRole = signal<'customer' | 'staff'>('customer');
 
   toggleMode(): void {
     this.mode.set(this.mode() === 'login' ? 'register' : 'login');
     this.errorMessage.set('');
     this.showPassword.set(false);
-    this.registerRole.set('customer');
-  }
-
-  setRegisterRole(role: 'customer' | 'staff'): void {
-    this.registerRole.set(role);
   }
 
   togglePasswordVisibility(): void {
@@ -542,8 +552,7 @@ export class LoginPageComponent {
     this.isLoading.set(true);
     this.errorMessage.set('');
     const payload = {
-      ...this.registerForm.getRawValue(),
-      role: this.registerRole()
+      ...this.registerForm.getRawValue()
     };
 
     this.authService.register(payload)
@@ -563,17 +572,6 @@ export class LoginPageComponent {
           }
         }
       });
-  }
-
-  quickLogin(role: UserRole): void {
-    const accountMap: Record<UserRole, string> = {
-      admin: 'admin@restaurant.com',
-      staff: 'staff@restaurant.com',
-      customer: 'customer@restaurant.com'
-    };
-
-    this.loginForm.patchValue({ email: accountMap[role], password: 'password123' });
-    this.onLogin();
   }
 
   private goToRoleHome(role: UserRole): void {

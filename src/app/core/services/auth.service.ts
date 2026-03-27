@@ -40,7 +40,7 @@ export class AuthService {
     );
   }
 
-  register(payload: { name: string; email: string; password: string; role?: UserRole }): Observable<ApiResponse<AuthResponse>> {
+  register(payload: { name: string; email: string; password: string }): Observable<ApiResponse<AuthResponse>> {
     return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/register`, payload).pipe(
       catchError(this.handleError)
     );
