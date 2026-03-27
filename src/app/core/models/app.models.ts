@@ -76,6 +76,7 @@ export interface InventoryItem {
   unit: string;
   stock: number;
   alertLevel: number;
+  category?: string; // optional category for inventory grouping
 }
 
 export interface DiscountItem {
