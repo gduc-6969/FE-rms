@@ -2,6 +2,7 @@ import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError, tap } from 'rxjs';
 import { UserRole, ApiResponse, AuthResponse } from '../models/app.models';
+import { environment } from '../../../environments/environment';
 
 const TOKEN_KEY = 'rms-token';
 const ROLE_KEY = 'rms-role';
@@ -12,16 +13,13 @@ const USER_KEY = 'rms-user';
 })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  
-  // Toggle between localhost and network IP by commenting/uncommenting:
-  private readonly apiUrl = 'http://localhost:8082/api/v1/auth';           // For local testing
-  // private readonly apiUrl = 'http://192.168.2.202:8081/api/v1/auth';    // For network/mobile testing
+  private readonly apiUrl = `${environment.API_BASE_URL}/auth`;
 
   readonly role = signal<UserRole | null>((localStorage.getItem(ROLE_KEY) as UserRole | null) ?? null);
   readonly fullName = signal<string | null>(localStorage.getItem(USER_KEY));
 
   private mapBackendRoleToUserRole(backendRole: string): UserRole {
-    if (backendRole === 'QUAN_LY') return 'admin';
+    if (backendRole === 'QUAN_LY') return 'admin';  
     if (backendRole === 'NHAN_VIEN') return 'staff';
     return 'customer';
   }
@@ -43,8 +41,7 @@ export class AuthService {
     );
   }
 
-  register(payload: { name: string; email: string; password: string }): Observable<ApiResponse<AuthResponse>> {
-    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/register`, payload).pipe(
+  register(payload: { name: string; email: string; password: string }): Observable<ApiResponse<AuthResponse>> {    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/register`, payload).pipe(
       catchError(this.handleError)
     );
   }
