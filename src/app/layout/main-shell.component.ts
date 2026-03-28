@@ -57,7 +57,7 @@ interface NavItem {
             </div>
             <button mat-stroked-button (click)="logout()">
               <mat-icon>logout</mat-icon>
-              Đăng xuất
+              Logout
             </button>
           </mat-toolbar>
 
@@ -70,8 +70,12 @@ interface NavItem {
       <section class="top-shell">
         <header class="topbar">
           <div class="top-brand">
-            <span class="brand-icon"><mat-icon>bar_chart</mat-icon></span>
-            <strong>Gastros</strong>
+            <img
+              class="top-logo-image"
+              src="/assets/logo.jpg"
+              alt="Desinare logo"
+            />
+            <strong>Desinare</strong>
           </div>
 
           <button mat-icon-button (click)="logout()" aria-label="logout">
@@ -173,7 +177,7 @@ interface NavItem {
         min-height: 100dvh;
         display: grid;
         grid-template-rows: auto auto 1fr;
-        background: #f3f4f6;
+        background: #0F0F0F;
       }
 
       .topbar {
@@ -182,8 +186,9 @@ interface NavItem {
         align-items: center;
         justify-content: space-between;
         padding: 0 16px;
-        border-bottom: 1px solid #e5e7eb;
-        background: #fafafa;
+        border-bottom: 1px solid #2C2C2C;
+        background: #1A1A1A;
+        backdrop-filter: blur(20px);
       }
 
       .top-brand {
@@ -192,24 +197,41 @@ interface NavItem {
         gap: 10px;
       }
 
-      .brand-icon {
+      .top-brand strong {
+        color: #C5A028;
+        font-size: 20px;
+        font-weight: 600;
+        font-family: 'Playfair Display', serif;
+        font-style: italic;
+      }
+
+      .top-logo-image {
         width: 36px;
         height: 36px;
-        border-radius: 12px;
-        background: #ff6a33;
-        color: white;
-        display: grid;
-        place-items: center;
+        object-fit: contain;
+      }
+
+      .topbar button {
+        color: #F0F0F0;
+      }
+
+      .topbar mat-icon {
+        color: #A0A0A0;
+      }
+
+      .topbar button:hover mat-icon {
+        color: #C5A028;
       }
 
       .top-nav {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
-        padding: 10px 16px;
-        border-bottom: 1px solid #e5e7eb;
-        background: #fafafa;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #2C2C2C;
+        background: #1A1A1A;
+        backdrop-filter: blur(20px);
         overflow: auto;
       }
 
@@ -219,20 +241,49 @@ interface NavItem {
         justify-content: center;
         gap: 8px;
         min-width: 140px;
-        padding: 9px 14px;
-        border-radius: 999px;
-        color: #475569;
+        max-width: 140px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        color: #F0F0F0;
+        background: #242424;
+        border: 1px solid #2C2C2C;
         text-decoration: none;
         white-space: nowrap;
+        transition: all 0.2s ease;
+        font-weight: 500;
+      }
+
+      .top-link:hover {
+        background: #2C2C2C;
+        border-color: #C5A028;
+      }
+
+      .top-link mat-icon {
+        color: #A0A0A0;
+        transition: color 0.2s ease;
+      }
+
+      .top-link:hover mat-icon {
+        color: #C5A028;
       }
 
       .active-top-link {
-        background: #ffedd5;
-        color: #ea580c;
+        background: #C5A028;
+        border-color: #C5A028;
+        color: #0F0F0F;
+      }
+
+      .active-top-link:hover {
+        background: #D4AF37;
+      }
+
+      .active-top-link mat-icon {
+        color: #0F0F0F;
       }
 
       .top-content {
-        padding: 16px;
+        padding: 0;
+        background: transparent;
       }
 
       .customer-content {
@@ -265,9 +316,9 @@ export class MainShellComponent {
       { label: 'Shift', icon: 'schedule', path: '/staff/shift' }
     ],
     customer: [
-      { label: 'Trang chủ', icon: 'home', path: '/customer/home' },
-      { label: 'Thực đơn', icon: 'menu_book', path: '/customer/menu' },
-      { label: 'Đặt bàn', icon: 'event_seat', path: '/customer/reservation' },
+      { label: 'Home', icon: 'home', path: '/customer/home' },
+      { label: 'Menu', icon: 'menu_book', path: '/customer/menu' },
+      { label: 'Reservation', icon: 'event_seat', path: '/customer/reservation' },
       { label: 'Profile', icon: 'person', path: '/customer/profile' }
     ]
   };

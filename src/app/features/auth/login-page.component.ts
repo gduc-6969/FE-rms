@@ -18,49 +18,37 @@ import { UserRole } from '../../core/models/app.models';
   template: `
     <div class="login-page">
       <div class="login-card">
+        <!-- Desinare Brand Header -->
         <div class="brand-block">
           <div class="brand-row">
             <img
               class="brand-logo-image"
-              src="/assets/vecteezy_steak-creative-icon-design_15969625-removebg-preview.png"
+              src="/assets/logo.jpg"
               alt="Desinare steak logo"
             />
             <div class="brand-name">Desinare</div>
-          </div>
-          <div class="brand-stars" aria-hidden="true">
-            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
           </div>
           <p class="brand-nickname">"Take a seat, for a classic treat."</p>
         </div>
 
         @if (mode() === 'login') {
           <form class="auth-form login-form" [formGroup]="loginForm" (ngSubmit)="onLogin()">
-            <label class="field-label" for="login-email">EMAIL OR PHONE NUMBER</label>
-            <div class="input-shell">
-              <mat-icon>mail_outline</mat-icon>
-              <input id="login-email" formControlName="email" placeholder="you@example.com" />
+            <div class="input-group">
+              <input 
+                id="login-email" 
+                formControlName="email" 
+                placeholder="Email Address or Phone Number" 
+                type="text"
+              />
             </div>
 
-            <label class="field-label" for="login-password">PASSWORD</label>
-            <div class="input-shell">
-              <mat-icon>lock_outline</mat-icon>
+            <div class="input-group">
               <input
                 id="login-password"
                 [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password"
-                placeholder="••••••••"
+                placeholder="Password"
               />
-              <button class="icon-btn" type="button" (click)="togglePasswordVisibility()" aria-label="Toggle password visibility">
-                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
-            </div>
-
-            <div class="row-options">
-              <label class="remember-me">
-                <input type="checkbox" formControlName="rememberMe" />
-                <span>Remember me</span>
-              </label>
-              <button class="text-action" type="button" (click)="onForgotPassword()">Forgot Password?</button>
             </div>
 
             @if (errorMessage()) {
@@ -68,35 +56,42 @@ import { UserRole } from '../../core/models/app.models';
             }
 
             <button class="submit-btn" type="submit" [disabled]="loginForm.invalid || isLoading()">
-              {{ isLoading() ? 'LOGGING IN...' : 'LOGIN' }}
+              {{ isLoading() ? 'LOGGING IN...' : 'CONTINUE' }}
               <mat-icon>arrow_forward</mat-icon>
             </button>
 
+            <!-- Mode Toggle Inside Form -->
             <div class="toggle-mode">
               <span>New to Desinare?</span>
               <button class="text-action" type="button" (click)="toggleMode()">Create an account</button>
             </div>
           </form>
         } @else {
-    
-
           <form class="auth-form register-form" [formGroup]="registerForm" (ngSubmit)="onRegister()">
-            <label class="field-label" for="register-name">FULL NAME</label>
-            <div class="input-shell">
-              <mat-icon>person_outline</mat-icon>
-              <input id="register-name" formControlName="name" placeholder="Nguyen Van A" />
+            <div class="input-group">
+              <input 
+                id="register-name" 
+                formControlName="name" 
+                placeholder="Full Name" 
+              />
             </div>
 
-            <label class="field-label" for="register-email">EMAIL</label>
-            <div class="input-shell">
-              <mat-icon>mail_outline</mat-icon>
-              <input id="register-email" formControlName="email" placeholder="you@example.com" />
+            <div class="input-group">
+              <input 
+                id="register-email" 
+                formControlName="email" 
+                placeholder="Email" 
+                type="email"
+              />
             </div>
 
-            <label class="field-label" for="register-password">PASSWORD</label>
-            <div class="input-shell">
-              <mat-icon>lock_outline</mat-icon>
-              <input id="register-password" type="password" formControlName="password" placeholder="••••••••" />
+            <div class="input-group">
+              <input 
+                id="register-password" 
+                type="password" 
+                formControlName="password" 
+                placeholder="Password" 
+              />
             </div>
 
             @if (errorMessage()) {
@@ -104,9 +99,11 @@ import { UserRole } from '../../core/models/app.models';
             }
 
             <button class="submit-btn" type="submit" [disabled]="registerForm.invalid || isLoading()">
-              {{ isLoading() ? 'CREATING...' : 'REGISTER' }}
+              {{ isLoading() ? 'CREATING...' : 'CONTINUE' }}
               <mat-icon>arrow_forward</mat-icon>
             </button>
+
+            <!-- Mode Toggle Inside Form -->
             <div class="toggle-mode">
               <span>Already have an account?</span>
               <button class="text-action" type="button" (click)="toggleMode()">Sign in</button>
@@ -119,360 +116,236 @@ import { UserRole } from '../../core/models/app.models';
   styles: [
     `
       :host {
-        --v-cream: #181617;
-        --v-parchment: #171416;
-        --v-sepia: #9f8864;
-        --v-brass: #b3905f;
-        --v-burgundy: #5f2236;
-        --v-forest: #465548;
-        --v-ink: #fff4e4;
-        --v-muted: #c8baa4;
+        display: block;
+        width: 100%;
+        height: 100%;
       }
 
+      /* Main Container - Single Background Pattern */
       .login-page {
         min-height: 100dvh;
         height: 100dvh;
-        display: grid;
-        place-items: center;
-        padding: clamp(8px, 2vh, 16px) 12px;
-        background:
-          linear-gradient(145deg, rgba(10, 10, 12, 0.93) 0%, rgba(21, 17, 18, 0.91) 62%, rgba(19, 13, 16, 0.94) 100%),
-          url('/assets/vecteezy_vector-vintage-fast-food-seamless-pattern-hand-drawn_14469007.jpg');
-        background-position: center;
-        background-size: cover;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         position: relative;
         overflow: hidden;
+        background: 
+          linear-gradient(135deg, rgba(15, 15, 15, 0.9) 0%, rgba(26, 26, 26, 0.95) 100%),
+          url('/assets/bg.jpg');
+        background-size: cover;
+        background-position: center;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       }
 
-      .login-page::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background:
-          radial-gradient(circle at 25% 10%, rgba(179, 144, 95, 0.14), transparent 34%),
-          radial-gradient(circle at 85% 86%, rgba(95, 34, 54, 0.22), transparent 36%);
-      }
-
-      .login-page::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background:
-          repeating-linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0.012) 0,
-            rgba(255, 255, 255, 0.012) 1px,
-            rgba(0, 0, 0, 0.018) 1px,
-            rgba(0, 0, 0, 0.018) 3px
-          ),
-          repeating-linear-gradient(
-            0deg,
-            rgba(255, 255, 255, 0.008) 0,
-            rgba(255, 255, 255, 0.008) 2px,
-            rgba(0, 0, 0, 0.014) 2px,
-            rgba(0, 0, 0, 0.014) 4px
-          );
-        opacity: 0.24;
-      }
-
+      /* Login Card */
       .login-card {
-        width: min(100%, 520px);
-        box-sizing: border-box;
-        border-radius: 0;
-        background: linear-gradient(180deg, rgba(23, 20, 21, 0.96) 0%, rgba(16, 14, 15, 0.96) 100%);
-        border: 1px solid rgba(179, 144, 95, 0.44);
-        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(251, 226, 178, 0.04);
-        padding: 20px 20px 18px;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
-        font-size: 16px;
-        color: var(--v-ink);
         position: relative;
         z-index: 1;
+        width: min(440px, 90%);
+        max-width: 440px;
+        background: #1A1A1A;
+        padding: 40px 35px;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+        border: 1px solid #2C2C2C;
+      }
+
+      /* Desinare Branding */
+      .brand-block {
+        text-align: center;
+        margin-bottom: 28px;
       }
 
       .brand-row {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        margin: 4px 0 8px;
-      }
-
-      .brand-block {
-        text-align: center;
-        margin-bottom: 12px;
+        gap: 14px;
+        margin: 0 0 10px;
       }
 
       .brand-logo-image {
-        width: 52px;
-        height: 52px;
+        width: 56px;
+        height: 56px;
         object-fit: contain;
-        filter: none;
+        border-radius: 12px;
       }
 
       .brand-name {
         font-family: 'Playfair Display', 'Times New Roman', serif;
-        font-size: clamp(42px, 6.2vw, 58px);
-        line-height: 1.08;
-        color: #fff8eb;
-        letter-spacing: 0.01em;
+        font-size: clamp(44px, 6vw, 56px);
+        line-height: 1.1;
+        color: #C5A028;
+        letter-spacing: 0.02em;
         font-weight: 700;
         font-style: italic;
-        text-shadow: 0 0 10px rgba(247, 238, 223, 0.22), 0 0 20px rgba(109, 73, 31, 0.2);
-      }
-
-      .brand-stars {
-        display: flex;
-        justify-content: center;
-        gap: 6px;
-        margin: 0 0 6px;
-        color: #c8a46c;
-        font-size: 11px;
-        letter-spacing: 0.1em;
       }
 
       .brand-nickname {
         margin: 0;
-        font-size: 16px;
-        line-height: 1.25;
-        color: #fff0da;
+        font-size: 17px;
+        line-height: 1.3;
+        color: #A0A0A0;
         font-style: italic;
         letter-spacing: 0.02em;
-        text-shadow: 0 0 8px rgba(240, 228, 206, 0.16);
+        font-weight: 400;
       }
 
-      .header {
-        position: relative;
-        margin-bottom: 6px;
-      }
-
-      .header::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: -12px;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(179, 144, 95, 0.52), transparent);
-      }
-
-      .header h1 {
-        font-family: 'Playfair Display', 'Times New Roman', serif;
-        font-size: clamp(42px, 7vw, 56px);
-        font-weight: 700;
-        color: #fff2dc;
-        letter-spacing: 0.01em;
-      }
-
-      .header p {
-        margin: 8px 0 22px;
-        font-size: 16px;
-        letter-spacing: 0.11em;
-        color: #d5c7b0;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
-      }
-
+      /* Form Styling */
       .auth-form {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+        gap: 16px;
       }
 
-      .login-form {
-        min-height: 430px;
+      .input-group {
+        position: relative;
       }
 
-      .register-form {
-        min-height: 0;
-      }
-
-      .field-label {
-        margin-top: 2px;
-        color: #e5d2b2;
-        font-size: 12px;
-        letter-spacing: 0.11em;
-        font-weight: 600;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
-      }
-
-      .input-shell {
-        border: 1px solid rgba(179, 144, 95, 0.52);
-        border-radius: 0;
-        min-height: 56px;
-        padding: 0 14px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: #1a1717;
-        box-shadow: inset 0 0 0 1px rgba(246, 220, 171, 0.05);
-      }
-
-      .input-shell mat-icon,
-      .icon-btn mat-icon {
-        color: #c39b64;
-      }
-
-      .input-shell input {
-        border: none;
-        outline: none;
+      .input-group input {
         width: 100%;
+        height: 54px;
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        border-radius: 12px;
+        padding: 0 18px;
         font-size: 15px;
+        color: #F0F0F0;
         font-weight: 500;
-        color: #fff1dc;
-        background: transparent;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+        outline: none;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
       }
 
-      .input-shell input::placeholder {
-        color: #bcab93;
+      .input-group input::placeholder {
+        color: #A0A0A0;
+        font-weight: 400;
       }
 
-      .icon-btn {
-        border: none;
-        background: transparent;
-        display: grid;
-        place-items: center;
-        padding: 0;
-        cursor: pointer;
+      .input-group input:focus {
+        background: #2C2C2C;
+        border-color: #C5A028;
+        box-shadow: 0 0 0 3px rgba(197, 160, 40, 0.15);
       }
 
-      .row-options {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 0;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
-      }
-
-      .remember-me {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #e0ceae;
+      /* Error Message */
+      .error {
+        color: #E06C6C;
         font-size: 14px;
+        margin: -8px 0 0 0;
         font-weight: 500;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
-      .remember-me input {
+      /* Submit Button */
+      .submit-btn {
+        height: 54px;
+        background: #C5A028;
+        border: none;
+        border-radius: 12px;
+        color: #0F0F0F;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        margin-top: 8px;
+      }
+
+      .submit-btn:hover:not(:disabled) {
+        background: #D4AF37;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(197, 160, 40, 0.3);
+      }
+
+      .submit-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .submit-btn mat-icon {
+        font-size: 20px;
         width: 20px;
         height: 20px;
-        accent-color: #c39b64;
+      }
+
+      /* Toggle Mode - Inside Form */
+      .toggle-mode {
+        border-top: 1px solid #2C2C2C;
+        margin-top: 18px;
+        padding-top: 16px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #A0A0A0;
+        font-weight: 500;
       }
 
       .text-action {
         border: none;
         background: transparent;
-        color: #f0c88a;
+        color: #C5A028;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         text-decoration: underline;
-        text-decoration-color: rgba(214, 170, 108, 0.45);
-        text-underline-offset: 4px;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+        text-decoration-color: rgba(197, 160, 40, 0.5);
+        text-underline-offset: 3px;
+        padding: 0;
+        transition: all 0.2s ease;
       }
 
-      .submit-btn {
-        margin-top: 12px;
-        min-height: 62px;
-        border: 1px solid rgba(201, 167, 104, 0.66);
-        border-radius: 0;
-        background: linear-gradient(180deg, #6a273b 0%, #4b1a2a 100%);
-        color: #fff4e3;
-        font-size: 15px;
-        letter-spacing: 0.13em;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(242, 212, 156, 0.1);
-        text-transform: uppercase;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+      .text-action:hover {
+        color: #D4AF37;
+        text-decoration-color: rgba(197, 160, 40, 0.8);
       }
 
-      .login-form .submit-btn {
-        margin-top: auto;
-      }
-
-      .submit-btn:disabled {
-        opacity: 0.65;
-        cursor: not-allowed;
-      }
-
-      .submit-btn mat-icon {
-        font-size: 26px;
-        width: 26px;
-        height: 26px;
-      }
-
-      .error {
-        color: #f2a0a4;
-        margin: 0;
-        text-align: left;
-        font-size: 14px;
-        font-weight: 600;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
-      }
-
-      .toggle-mode {
-        border-top: 1px solid rgba(179, 144, 95, 0.24);
-        margin-top: 14px;
-        padding-top: 12px;
-        text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        font-size: 14px;
-        color: #d5c5ab;
-        font-weight: 600;
-        font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
-      }
-
+      /* Responsive Design */
       @media (max-width: 640px) {
         .login-card {
-          width: min(100%, 430px);
-          padding: 14px;
-        }
-
-        .login-form {
-          min-height: 0;
+          width: calc(100% - 24px);
+          padding: 32px 26px;
+          border-radius: 12px;
         }
 
         .brand-name {
-          font-size: clamp(34px, 10vw, 46px);
-          line-height: 1.06;
-          letter-spacing: 0.01em;
+          font-size: clamp(38px, 9vw, 48px);
+        }
+
+        .brand-logo-image {
+          width: 50px;
+          height: 50px;
         }
 
         .brand-nickname {
-          font-size: 12px;
+          font-size: 15px;
         }
 
-        .header h1 {
-          font-size: clamp(34px, 9vw, 46px);
-        }
-
-        .input-shell {
-          min-height: 52px;
+        .input-group input {
+          height: 50px;
         }
 
         .submit-btn {
-          min-height: 56px;
-          margin-top: 10px;
+          height: 50px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .login-card {
+          border-radius: 10px;
+          padding: 28px 22px;
         }
 
-        .row-options,
-        .toggle-mode {
-          flex-wrap: wrap;
+        .brand-name {
+          font-size: clamp(34px, 10vw, 42px);
         }
       }
     `
@@ -515,6 +388,11 @@ export class LoginPageComponent {
 
   onForgotPassword(): void {
     this.errorMessage.set('Tính năng quên mật khẩu sẽ được cập nhật sớm.');
+  }
+
+  onSocialLogin(provider: 'twitter' | 'google' | 'facebook'): void {
+    this.errorMessage.set(`Đăng nhập bằng ${provider} sẽ được cập nhật sớm.`);
+    // TODO: Implement social login integration
   }
 
   onLogin(): void {
