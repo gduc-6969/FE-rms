@@ -1,5 +1,11 @@
-import { ChangeDetectionStrategy, Component, signal, computed } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  signal,
+  computed
+} from '@angular/core';
+import { CurrencyPipe, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,24 +13,18 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MockDataService } from '../../core/services/mock-data.service';
+import { MenuService } from '../../core/services/menu.service';
+import { CategoryResponse, MenuItemResponse } from '../../core/models/app.models';
+import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-interface MenuItem {
-  id: number;
-  name: string;
-  nameEn: string;
-  description: string;
-  price: number;
-  category: string;
-  uiCategory: string;
-  isChefPick?: boolean;
-  dietary?: string[];
-}
+const ALL_CATEGORY_ID = -1;
 
 @Component({
   selector: 'app-customer-menu',
   standalone: true,
   imports: [
+    CommonModule,
     MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule,
     MatIconModule, MatDialogModule, FormsModule, CurrencyPipe
   ],
@@ -43,6 +43,7 @@ interface MenuItem {
           <input
             type="text"
             [(ngModel)]="keyword"
+            (ngModelChange)="onKeywordChange($event)"
             placeholder="Search dishes, ingredients..."
             class="search-input"
           />
@@ -53,68 +54,72 @@ interface MenuItem {
       </div>
 
       <!-- Results Count -->
-      @if (keyword || selectedCategory() !== 'All') {
-        <p class="results-count">{{ filteredItems().length }} items found</p>
+      @if (keyword || selectedCategoryId() !== ALL_ID) {
+        <p class="results-count">{{ displayedItems().length }} items found</p>
+      }
+
+      <!-- Loading state -->
+      @if (isLoading()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading menu...</p>
+        </div>
       }
 
       <!-- Category Pills with Counts -->
-      <div class="category-pills">
-        @for (cat of categoriesWithCounts(); track cat.name) {
+      @if (!isLoading()) {
+        <div class="category-pills">
+          <!-- "All" pill -->
           <button
             type="button"
-            [class.active]="selectedCategory() === cat.name"
-            (click)="selectedCategory.set(cat.name)"
+            [class.active]="selectedCategoryId() === ALL_ID"
+            (click)="selectCategory(ALL_ID)"
           >
-            {{ cat.name }} ({{ cat.count }})
+            All ({{ allItems().length }})
           </button>
-        }
-      </div>
 
-      <!-- Menu List -->
-      <section class="menu-list">
-        @for (item of filteredItems(); track item.id) {
-          <mat-card class="menu-card" (click)="openDetails(item)">
-            <div class="card-layout">
-              <div class="dish-image">
-                @if (item.isChefPick) {
-                  <span class="chef-badge">
-                    <mat-icon>star</mat-icon>
-                  </span>
-                }
-              </div>
-              <div class="dish-content">
-                <div class="dish-header">
-                  <div class="dish-titles">
-                    <div class="title-row">
-                      <h3>{{ item.nameEn }}</h3>
-                      <!-- Dietary Icons next to name -->
-                      @if (item.dietary && item.dietary.length) {
-                        <div class="dietary-badges">
-                          @for (badge of item.dietary; track badge) {
-                            <span class="dietary-icon" [attr.title]="badge">
-                              @switch (badge) {
-                                @case ('spicy') { 🌶️ }
-                                @case ('vegetarian') { 🥬 }
-                                @case ('vegan') { 🌱 }
-                                @case ('gluten-free') { 🌾 }
-                                @case ('seafood') { 🦐 }
-                                @case ('beef') { 🥩 }
-                              }
-                            </span>
-                          }
-                        </div>
-                      }
-                    </div>
-                    <p class="dish-name-vn">{{ item.name }}</p>
-                  </div>
-                  <span class="dish-price">{{ item.price | currency : 'USD' : 'symbol' : '1.0-0' }}</span>
+          @for (cat of categories(); track cat.id) {
+            <button
+              type="button"
+              [class.active]="selectedCategoryId() === cat.id"
+              (click)="selectCategory(cat.id)"
+            >
+              {{ cat.name }} ({{ countByCategory(cat.id) }})
+            </button>
+          }
+        </div>
+
+        <!-- Menu List -->
+        <section class="menu-list">
+          @for (item of displayedItems(); track item.id) {
+            <mat-card class="menu-card" (click)="openDetails(item)">
+              <div class="card-layout">
+                <div class="dish-image" [style.backgroundImage]="item.imageUrl ? 'url(' + item.imageUrl + ')' : ''">
                 </div>
-                <p class="dish-desc">{{ item.description }}</p>
+                <div class="dish-content">
+                  <div class="dish-header">
+                    <div class="dish-titles">
+                      <div class="title-row">
+                        <h3>{{ item.name }}</h3>
+                      </div>
+                      <p class="dish-category-label">{{ item.categoryName }}</p>
+                    </div>
+                    <span class="dish-price">{{ item.price | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+                  </div>
+                  <p class="dish-desc">{{ item.categoryName }} · Price: {{ item.price | number }}đ</p>
+                </div>
               </div>
+            </mat-card>
+          }
+
+          @if (displayedItems().length === 0 && !isLoading()) {
+            <div class="empty-state">
+              <mat-icon>restaurant_menu</mat-icon>
+              <p>Không tìm thấy món ăn phù hợp.</p>
             </div>
-          </mat-card>
-        }
-      </section>
+          }
+        </section>
+      }
     </section>
   `,
   styles: [
@@ -231,6 +236,29 @@ interface MenuItem {
         color: #A0A0A0;
       }
 
+      /* Loading State */
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 48px 0;
+        color: #A0A0A0;
+      }
+
+      .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #2C2C2C;
+        border-top-color: #C5A028;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
       /* Category Pills */
       .category-pills {
         display: flex;
@@ -312,28 +340,10 @@ interface MenuItem {
         width: 120px;
         height: 140px;
         background: linear-gradient(135deg, #242424 0%, #1A1A1A 100%);
+        background-size: cover;
+        background-position: center;
         position: relative;
         flex-shrink: 0;
-      }
-
-      .chef-badge {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #C5A028;
-        color: #0F0F0F;
-        border-radius: 50%;
-      }
-
-      .chef-badge mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
       }
 
       .dish-content {
@@ -376,7 +386,7 @@ interface MenuItem {
         min-width: 0;
       }
 
-      .dish-name-vn {
+      .dish-category-label {
         margin: 2px 0 0;
         color: #A0A0A0;
         font-size: 12px;
@@ -405,29 +415,21 @@ interface MenuItem {
         flex: 1;
       }
 
-      .dish-footer {
+      /* Empty State */
+      .empty-state {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
         gap: 12px;
-        margin-top: auto;
-        min-height: 28px;
+        padding: 48px 0;
+        color: #A0A0A0;
       }
 
-      .dietary-badges {
-        display: flex;
-        gap: 4px;
-        flex-wrap: nowrap;
-        flex-shrink: 0;
-      }
-
-      .dietary-icon {
-        font-size: 12px;
-        padding: 2px 4px;
-        background: #242424;
-        border: 1px solid #2C2C2C;
-        border-radius: 6px;
-        line-height: 1;
+      .empty-state mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        color: #2C2C2C;
       }
 
       /* Mobile Layout */
@@ -458,102 +460,84 @@ interface MenuItem {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CustomerMenuComponent {
+export class CustomerMenuComponent implements OnInit {
+  readonly ALL_ID = ALL_CATEGORY_ID;
+
   keyword = '';
   showFilters = false;
-  selectedCategory = signal('All');
 
-  private readonly rawItems: MenuItem[] = this.mockData.getMenuItems().map((item, index) => ({
-    ...item,
-    nameEn: this.getEnglishName(item.name),
-    description: this.getDescription(item.name),
-    uiCategory: item.category === 'Khai vị' ? 'Appetizers' : item.category === 'Món chính' ? 'Mains' : 'Desserts',
-    isChefPick: index === 0 || index === 3,
-    dietary: this.getDietary(item.name)
-  }));
+  // Signals for state
+  categories = signal<CategoryResponse[]>([]);
+  allItems = signal<MenuItemResponse[]>([]);
+  isLoading = signal(true);
+  selectedCategoryId = signal<number>(ALL_CATEGORY_ID);
 
-  readonly categoriesWithCounts = computed(() => {
-    const all = this.rawItems.length;
-    const appetizers = this.rawItems.filter(i => i.uiCategory === 'Appetizers').length;
-    const mains = this.rawItems.filter(i => i.uiCategory === 'Mains').length;
-    const desserts = this.rawItems.filter(i => i.uiCategory === 'Desserts').length;
+  // Search subject for debounce
+  private readonly searchSubject = new Subject<string>();
 
-    return [
-      { name: 'All', count: all },
-      { name: 'Appetizers', count: appetizers },
-      { name: 'Mains', count: mains },
-      { name: 'Desserts', count: desserts }
-    ];
-  });
+  // Items shown after keyword/category filter (client-side)
+  readonly displayedItems = computed(() => {
+    const kw = this.keyword.trim().toLowerCase();
+    const catId = this.selectedCategoryId();
+    let items = catId === ALL_CATEGORY_ID
+      ? this.allItems()
+      : this.allItems().filter(i => i.categoryId === catId);
 
-  readonly filteredItems = computed(() => {
-    const keyword = this.keyword.trim().toLowerCase();
-    const category = this.selectedCategory();
-
-    let items = category === 'All'
-      ? this.rawItems
-      : this.rawItems.filter(item => item.uiCategory === category);
-
-    if (keyword) {
-      items = items.filter(item =>
-        item.name.toLowerCase().includes(keyword) ||
-        item.nameEn.toLowerCase().includes(keyword) ||
-        item.description.toLowerCase().includes(keyword)
+    if (kw) {
+      items = items.filter(i =>
+        i.name.toLowerCase().includes(kw) ||
+        i.categoryName.toLowerCase().includes(kw)
       );
     }
-
     return items;
   });
 
   constructor(
-    private readonly mockData: MockDataService,
+    private readonly menuService: MenuService,
     private readonly dialog: MatDialog
   ) {}
 
-  openDetails(item: MenuItem): void {
-    // Could open a modal with full details
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  private loadData(): void {
+    this.isLoading.set(true);
+
+    // Load categories - only show active ones (hoat_dong)
+    this.menuService.getCategories().subscribe({
+      next: cats => {
+        this.categories.set(cats.filter(c => c.status === 'hoat_dong'));
+      },
+      error: err => console.error('Failed to load categories', err)
+    });
+
+    // Load available menu items
+    this.menuService.getAvailableMenuItems().subscribe({
+      next: items => {
+        this.allItems.set(items);
+        this.isLoading.set(false);
+      },
+      error: err => {
+        console.error('Failed to load menu items', err);
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  selectCategory(id: number): void {
+    this.selectedCategoryId.set(id);
+  }
+
+  countByCategory(categoryId: number): number {
+    return this.allItems().filter(i => i.categoryId === categoryId).length;
+  }
+
+  onKeywordChange(value: string): void {
+    this.keyword = value;
+  }
+
+  openDetails(item: MenuItemResponse): void {
     console.log('Opening details for:', item);
-  }
-
-  private getEnglishName(vn: string): string {
-    const translations: Record<string, string> = {
-      'Bò lúc lắc': 'Shaking Beef',
-      'Gỏi cuốn tôm thịt': 'Shrimp & Pork Spring Rolls',
-      'Phở bò': 'Beef Pho Noodle Soup',
-      'Cơm tấm sườn': 'Broken Rice with Grilled Pork',
-      'Bánh mì thịt': 'Vietnamese Baguette Sandwich',
-      'Chả giò': 'Crispy Spring Rolls',
-      'Cà phê sữa đá': 'Vietnamese Iced Coffee',
-      'Chè ba màu': 'Three-Color Dessert'
-    };
-    return translations[vn] || vn;
-  }
-
-  private getDescription(name: string): string {
-    const descriptions: Record<string, string> = {
-      'Bò lúc lắc': 'Tender beef cubes sautéed with garlic and bell peppers, served with fresh salad and steamed rice.',
-      'Gỏi cuốn tôm thịt': 'Fresh rice paper rolls with shrimp, pork, vermicelli, and herbs, served with peanut dipping sauce.',
-      'Phở bò': 'Traditional Vietnamese noodle soup with slow-simmered beef broth, rice noodles, and fresh herbs.',
-      'Cơm tấm sườn': 'Grilled pork chop served over broken rice with pickled vegetables and fish sauce.',
-      'Bánh mì thịt': 'Crispy baguette filled with grilled pork, pâté, pickled vegetables, and cilantro.',
-      'Chả giò': 'Crispy fried spring rolls filled with pork, shrimp, and vegetables, served with nuoc cham.',
-      'Cà phê sữa đá': 'Strong Vietnamese coffee with condensed milk, served over ice.',
-      'Chè ba màu': 'Layered dessert with mung beans, red beans, and pandan jelly in coconut milk.'
-    };
-    return descriptions[name] || 'A delicious dish prepared with fresh ingredients.';
-  }
-
-  private getDietary(name: string): string[] {
-    const dietary: Record<string, string[]> = {
-      'Bò lúc lắc': ['beef', 'spicy'],
-      'Gỏi cuốn tôm thịt': ['seafood'],
-      'Phở bò': ['beef', 'gluten-free'],
-      'Cơm tấm sườn': ['spicy'],
-      'Bánh mì thịt': [],
-      'Chả giò': ['seafood'],
-      'Cà phê sữa đá': ['vegetarian'],
-      'Chè ba màu': ['vegan', 'gluten-free']
-    };
-    return dietary[name] || [];
   }
 }
