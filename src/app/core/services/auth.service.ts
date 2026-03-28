@@ -12,7 +12,10 @@ const USER_KEY = 'rms-user';
 })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:8082/api/v1/auth';
+  
+  // Toggle between localhost and network IP by commenting/uncommenting:
+  private readonly apiUrl = 'http://localhost:8082/api/v1/auth';           // For local testing
+  // private readonly apiUrl = 'http://192.168.2.202:8081/api/v1/auth';    // For network/mobile testing
 
   readonly role = signal<UserRole | null>((localStorage.getItem(ROLE_KEY) as UserRole | null) ?? null);
   readonly fullName = signal<string | null>(localStorage.getItem(USER_KEY));

@@ -459,7 +459,7 @@ export class LoginPageComponent {
       customer: '/customer/home'
     };
 
-    this.router.navigateByUrl(routeMap[role]);
+    this.router.navigate([routeMap[role]], { replaceUrl: true });
   }
 }
 

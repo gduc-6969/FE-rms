@@ -346,6 +346,6 @@ export class MainShellComponent {
 
   logout(): void {
     this.authService.logout();
-    this.router.navigateByUrl('/login');
+    this.router.navigate(['/login'], { replaceUrl: true });
   }
 }
