@@ -16,11 +16,22 @@ export interface CustomerReservationDraft {
   table: ReservationTableOption;
 }
 
+export interface CustomerReservation {
+  id: number;
+  guests: number;
+  date: string;
+  time: string;
+  table: ReservationTableOption;
+  status: 'pending' | 'accepted' | 'denied';
+  createdAt: Date;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class CustomerReservationFlowService {
   readonly selectedDraft = signal<CustomerReservationDraft | null>(null);
+  readonly myReservations = signal<CustomerReservation[]>([]);
 
   readonly tableLayout = signal<ReservationTableOption[]>(
     this.mockDataService.getDiningTables().map(table => ({
@@ -40,5 +51,23 @@ export class CustomerReservationFlowService {
 
   clearDraft(): void {
     this.selectedDraft.set(null);
+  }
+
+  submitReservation(): void {
+    const draft = this.selectedDraft();
+    if (!draft) return;
+
+    const newReservation: CustomerReservation = {
+      id: Date.now(),
+      guests: draft.guests,
+      date: draft.date,
+      time: draft.time,
+      table: draft.table,
+      status: 'pending',
+      createdAt: new Date()
+    };
+
+    this.myReservations.update(reservations => [...reservations, newReservation]);
+    this.clearDraft();
   }
 }

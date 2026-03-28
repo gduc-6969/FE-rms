@@ -1,4 +1,28 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Great+Vibes&family=Lora:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
+
+/* Restaurant Booking System - Dark Theme Design System */
+/* Based on instruction.md specifications */
+
+:root {
+	/* Color Palette - Dark Theme */
+	--bg-base: #0F0F0F;
+	--surface: #1A1A1A;
+	--elevated: #242424;
+	--text-primary: #F0F0F0;
+	--text-secondary: #A0A0A0;
+	--accent: #C5A028;
+	--accent-hover: #D4AF37;
+	--success: #2BAE66;
+	--error: #E06C6C;
+	--border: #2C2C2C;
+
+	/* Spacing & Sizing */
+	--rms-radius-lg: 16px;
+	--rms-radius-md: 12px;
+	--rms-radius-sm: 8px;
+	--rms-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	--rms-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
 
 html,
 body {
@@ -7,35 +31,183 @@ body {
 
 body {
 	margin: 0;
-	font-family: 'Inter', Roboto, 'Helvetica Neue', sans-serif;
-	color: #111827;
-	background: #f8fafc;
+	font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+	color: var(--text-primary);
+	background: var(--bg-base);
+	font-size: 16px;
+	line-height: 1.5;
 }
 
 * {
 	box-sizing: border-box;
 }
 
-h1,
-h2,
+/* Typography */
+h1 {
+	margin: 0;
+	color: var(--text-primary);
+	font-size: 28px;
+	font-weight: 600;
+}
+
+h2 {
+	margin: 0;
+	color: var(--text-primary);
+	font-size: 20px;
+	font-weight: 600;
+}
+
 h3 {
 	margin: 0;
+	color: var(--text-primary);
+	font-size: 18px;
+	font-weight: 600;
 }
 
-:root {
-	--rms-radius-lg: 18px;
-	--rms-radius-md: 12px;
-	--rms-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+p {
+	color: var(--text-primary);
 }
 
+small {
+	font-size: 14px;
+	color: var(--text-secondary);
+}
+
+/* Material Card Dark Theme */
 .mat-mdc-card {
 	border-radius: var(--rms-radius-lg) !important;
+	background: var(--surface) !important;
+	border: 1px solid var(--border) !important;
+	color: var(--text-primary) !important;
+	box-shadow: var(--rms-shadow) !important;
 }
 
+.mat-mdc-card-content {
+	color: var(--text-primary) !important;
+}
+
+/* Material Button Dark Theme */
 .mat-mdc-button-base {
 	border-radius: var(--rms-radius-md) !important;
+	transition: all 0.2s ease !important;
+}
+
+/* Primary/CTA Buttons - Gold Accent */
+.mat-mdc-raised-button,
+.mat-mdc-flat-button {
+	background: var(--accent) !important;
+	color: var(--bg-base) !important;
+	font-weight: 600 !important;
+}
+
+.mat-mdc-raised-button:hover,
+.mat-mdc-flat-button:hover {
+	background: var(--accent-hover) !important;
+}
+
+/* Outlined Buttons */
+.mat-mdc-outlined-button,
+.mat-mdc-stroked-button {
+	border-color: var(--border) !important;
+	color: var(--text-primary) !important;
+	background: var(--elevated) !important;
+}
+
+.mat-mdc-stroked-button:hover {
+	background: var(--surface) !important;
+	border-color: var(--accent) !important;
+}
+
+/* Material Form Field Dark Theme */
+.mat-mdc-form-field {
+	color: var(--text-primary) !important;
 }
 
 .mat-mdc-form-field-subscript-wrapper {
 	display: none;
+}
+
+.mat-mdc-text-field-wrapper {
+	background: var(--elevated) !important;
+	border-radius: var(--rms-radius-sm) !important;
+}
+
+.mat-mdc-form-field-label,
+.mdc-floating-label {
+	color: var(--text-secondary) !important;
+}
+
+.mat-mdc-input-element,
+.mat-mdc-select-value {
+	color: var(--text-primary) !important;
+}
+
+.mat-mdc-form-field-focus-overlay {
+	background: transparent !important;
+}
+
+.mdc-notched-outline__leading,
+.mdc-notched-outline__notch,
+.mdc-notched-outline__trailing {
+	border-color: var(--border) !important;
+}
+
+/* Focus state - Accent glow */
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+	border-color: var(--accent) !important;
+	box-shadow: 0 0 0 2px rgba(197, 160, 40, 0.4);
+}
+
+/* Material Icon Dark Theme */
+.mat-icon {
+	color: var(--text-secondary);
+	transition: color 0.2s ease;
+}
+
+.mat-icon.active,
+.mat-icon:hover {
+	color: var(--accent);
+}
+
+/* Material List Dark Theme */
+.mat-mdc-list-item {
+	color: var(--text-primary) !important;
+}
+
+/* Scrollbar Dark Theme */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--elevated);
+	border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--accent);
+}
+
+/* Utility Classes */
+.text-accent {
+	color: var(--accent) !important;
+}
+
+.text-secondary {
+	color: var(--text-secondary) !important;
+}
+
+.bg-surface {
+	background: var(--surface) !important;
+}
+
+.bg-elevated {
+	background: var(--elevated) !important;
 }

@@ -13,7 +13,7 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
   template: `
     <section class="secure-page">
       <header class="secure-header">
-        <button mat-icon-button type="button" (click)="goBack()" aria-label="Quay lại chỉnh sửa">
+        <button mat-icon-button type="button" (click)="goBack()" aria-label="Back to edit">
           <mat-icon>chevron_left</mat-icon>
         </button>
         <h2>Confirm Booking</h2>
@@ -54,12 +54,12 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
             </div>
 
             <button class="secure-btn" mat-flat-button type="button" (click)="submitReservation()">
-              XÁC NHẬN ĐẶT BÀN
+              CONFIRM RESERVATION
             </button>
           } @else {
             <div class="empty-state">
-              <p>Không có thông tin đặt bàn. Vui lòng quay lại để chọn lại.</p>
-              <button mat-flat-button type="button" (click)="goBack()">Quay lại đặt bàn</button>
+              <p>No reservation information. Please go back to select again.</p>
+              <button mat-flat-button type="button" (click)="goBack()">Back to Reservation</button>
             </div>
           }
         </mat-card-content>
@@ -71,6 +71,9 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
       .secure-page {
         display: grid;
         gap: 12px;
+        background: #0F0F0F;
+        min-height: 100vh;
+        padding: 20px;
       }
 
       .secure-header {
@@ -79,9 +82,20 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
         align-items: center;
       }
 
+      .secure-header button {
+        color: #F0F0F0;
+      }
+
+      .secure-header button:hover {
+        color: #C5A028;
+      }
+
       .secure-header h2 {
         margin: 0;
         text-align: center;
+        color: #F0F0F0;
+        font-weight: 600;
+        font-size: 24px;
       }
 
       .placeholder {
@@ -90,41 +104,51 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
       }
 
       .secure-card {
-        border-radius: 22px;
+        border-radius: 16px;
+        background: #1A1A1A;
+        border: 1px solid #2C2C2C;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       }
 
       .summary-title {
-        margin: 0 0 12px;
+        margin: 0 0 16px;
         font-size: 18px;
+        color: #F0F0F0;
+        font-weight: 600;
       }
 
       .info-block {
-        background: #f1f5f9;
-        border-radius: 18px;
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        border-radius: 12px;
         padding: 14px;
         display: grid;
-        gap: 2px;
+        gap: 4px;
       }
 
       .info-block span {
-        font-size: 12px;
-        letter-spacing: 1px;
-        color: #64748b;
-        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: #A0A0A0;
+        font-weight: 600;
+        text-transform: uppercase;
       }
 
       .info-block strong {
         font-size: 32px;
         line-height: 1.12;
+        color: #F0F0F0;
+        font-weight: 600;
       }
 
       .info-block .time {
-        color: #ea580c;
+        color: #C5A028;
         font-size: 28px;
       }
 
       .info-block small {
-        color: #64748b;
+        color: #A0A0A0;
+        font-size: 14px;
       }
 
       .split-row {
@@ -136,35 +160,79 @@ import { CustomerReservationFlowService } from '../../core/services/customer-res
 
       .address-block {
         margin-top: 12px;
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 14px;
-        background: #fff7ed;
-        color: #9a3412;
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        color: #F0F0F0;
         display: flex;
         gap: 10px;
       }
 
+      .address-block mat-icon {
+        color: #C5A028;
+      }
+
+      .address-block strong {
+        color: #F0F0F0;
+        font-weight: 600;
+      }
+
       .address-block p {
         margin: 4px 0 0;
-        color: #64748b;
+        color: #A0A0A0;
+        font-size: 14px;
       }
 
       .secure-btn {
-        margin-top: 14px;
+        margin-top: 18px;
         width: 100%;
-        border-radius: 999px;
+        border-radius: 12px;
         min-height: 52px;
-        background: #1f2937;
-        color: #ffffff;
-        letter-spacing: 1.5px;
+        background: #C5A028;
+        color: #0F0F0F;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        font-size: 16px;
+        text-transform: uppercase;
+        transition: all 0.2s ease;
+      }
+
+      .secure-btn:hover {
+        background: #D4AF37;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(197, 160, 40, 0.3);
       }
 
       .empty-state {
         display: grid;
         gap: 10px;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .empty-state p {
+        color: #A0A0A0;
+        font-size: 15px;
+      }
+
+      .empty-state button {
+        background: #C5A028;
+        color: #0F0F0F;
+        font-weight: 600;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+      }
+
+      .empty-state button:hover {
+        background: #D4AF37;
       }
 
       @media (max-width: 640px) {
+        .secure-page {
+          padding: 16px;
+        }
+
         .split-row {
           grid-template-columns: 1fr;
         }
@@ -195,7 +263,7 @@ export class CustomerSecureReservationComponent {
       return;
     }
 
-    this.snackBar.open('✅ Yêu cầu đặt bàn đã được gửi (mock)!', 'Đóng', { duration: 2500 });
+    this.snackBar.open('✅ Reservation request submitted (mock)!', 'Close', { duration: 2500 });
     this.reservationFlow.clearDraft();
     this.router.navigateByUrl('/customer/home');
   }

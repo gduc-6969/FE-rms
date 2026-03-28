@@ -138,3 +138,20 @@ export interface TableSession {
   status: 'open' | 'closed';
   orders: OrderLineItem[];
 }
+
+export interface CategoryResponse {
+  id: number;
+  name: string;
+  status: string;
+}
+
+export interface MenuItemResponse {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  name: string;
+  price: number;
+  imageUrl?: string;
+  status: string;
+  createdAt?: string;
+}

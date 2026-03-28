@@ -18,44 +18,37 @@ import { UserRole } from '../../core/models/app.models';
   template: `
     <div class="login-page">
       <div class="login-card">
-        <div class="brand-row">
-          <div class="brand-icon"><mat-icon>bar_chart</mat-icon></div>
-          <div class="brand-name">Gastros</div>
+        <!-- Desinare Brand Header -->
+        <div class="brand-block">
+          <div class="brand-row">
+            <img
+              class="brand-logo-image"
+              src="/assets/logo.jpg"
+              alt="Desinare steak logo"
+            />
+            <div class="brand-name">Desinare</div>
+          </div>
+          <p class="brand-nickname">"Take a seat, for a classic treat."</p>
         </div>
 
         @if (mode() === 'login') {
-          <div class="header">
-            <h1>Welcome Back</h1>
-            <p>ENTER YOUR CREDENTIALS TO CONTINUE</p>
-          </div>
-
-          <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="onLogin()">
-            <label class="field-label" for="login-email">EMAIL OR PHONE NUMBER</label>
-            <div class="input-shell">
-              <mat-icon>mail_outline</mat-icon>
-              <input id="login-email" formControlName="email" placeholder="you@example.com" />
+          <form class="auth-form login-form" [formGroup]="loginForm" (ngSubmit)="onLogin()">
+            <div class="input-group">
+              <input 
+                id="login-email" 
+                formControlName="email" 
+                placeholder="Email Address or Phone Number" 
+                type="text"
+              />
             </div>
 
-            <label class="field-label" for="login-password">PASSWORD</label>
-            <div class="input-shell">
-              <mat-icon>lock_outline</mat-icon>
+            <div class="input-group">
               <input
                 id="login-password"
                 [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password"
-                placeholder="••••••••"
+                placeholder="Password"
               />
-              <button class="icon-btn" type="button" (click)="togglePasswordVisibility()" aria-label="Toggle password visibility">
-                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
-            </div>
-
-            <div class="row-options">
-              <label class="remember-me">
-                <input type="checkbox" formControlName="rememberMe" />
-                <span>Remember me</span>
-              </label>
-              <button class="text-action" type="button" (click)="onForgotPassword()">Forgot Password?</button>
             </div>
 
             @if (errorMessage()) {
@@ -63,68 +56,42 @@ import { UserRole } from '../../core/models/app.models';
             }
 
             <button class="submit-btn" type="submit" [disabled]="loginForm.invalid || isLoading()">
-              {{ isLoading() ? 'LOGGING IN...' : 'LOGIN' }}
+              {{ isLoading() ? 'LOGGING IN...' : 'CONTINUE' }}
               <mat-icon>arrow_forward</mat-icon>
             </button>
 
-            <div class="quick-login">
-              <p>QUICK DEMO ACCESS</p>
-              <div class="quick-buttons">
-                <button type="button" (click)="quickLogin('customer')">Customer</button>
-                <button type="button" (click)="quickLogin('staff')">Staff</button>
-                <button type="button" (click)="quickLogin('admin')">Manager</button>
-              </div>
-            </div>
-
+            <!-- Mode Toggle Inside Form -->
             <div class="toggle-mode">
-              <span>New to Gastros?</span>
+              <span>New to Desinare?</span>
               <button class="text-action" type="button" (click)="toggleMode()">Create an account</button>
             </div>
           </form>
         } @else {
-          <div class="header">
-            <h1>Create Account</h1>
-            <p>REGISTER TO ACCESS THE RESTAURANT SYSTEM</p>
-          </div>
-
-          <form class="auth-form" [formGroup]="registerForm" (ngSubmit)="onRegister()">
-            <div class="role-tabs" role="tablist" aria-label="Register role">
-              <button
-                class="role-tab"
-                [class.active]="registerRole() === 'customer'"
-                type="button"
-                (click)="setRegisterRole('customer')"
-              >
-                <mat-icon>person_outline</mat-icon>
-                <span>CUSTOMER</span>
-              </button>
-              <button
-                class="role-tab"
-                [class.active]="registerRole() === 'staff'"
-                type="button"
-                (click)="setRegisterRole('staff')"
-              >
-                <mat-icon>groups_2</mat-icon>
-                <span>STAFF</span>
-              </button>
+          <form class="auth-form register-form" [formGroup]="registerForm" (ngSubmit)="onRegister()">
+            <div class="input-group">
+              <input 
+                id="register-name" 
+                formControlName="name" 
+                placeholder="Full Name" 
+              />
             </div>
 
-            <label class="field-label" for="register-name">FULL NAME</label>
-            <div class="input-shell">
-              <mat-icon>person_outline</mat-icon>
-              <input id="register-name" formControlName="name" placeholder="Nguyen Van A" />
+            <div class="input-group">
+              <input 
+                id="register-email" 
+                formControlName="email" 
+                placeholder="Email" 
+                type="email"
+              />
             </div>
 
-            <label class="field-label" for="register-email">EMAIL</label>
-            <div class="input-shell">
-              <mat-icon>mail_outline</mat-icon>
-              <input id="register-email" formControlName="email" placeholder="you@example.com" />
-            </div>
-
-            <label class="field-label" for="register-password">PASSWORD</label>
-            <div class="input-shell">
-              <mat-icon>lock_outline</mat-icon>
-              <input id="register-password" type="password" formControlName="password" placeholder="••••••••" />
+            <div class="input-group">
+              <input 
+                id="register-password" 
+                type="password" 
+                formControlName="password" 
+                placeholder="Password" 
+              />
             </div>
 
             @if (errorMessage()) {
@@ -132,15 +99,11 @@ import { UserRole } from '../../core/models/app.models';
             }
 
             <button class="submit-btn" type="submit" [disabled]="registerForm.invalid || isLoading()">
-              {{
-                isLoading()
-                  ? 'CREATING...'
-                  : registerRole() === 'staff'
-                    ? 'REGISTER AS STAFF'
-                    : 'REGISTER AS CUSTOMER'
-              }}
+              {{ isLoading() ? 'CREATING...' : 'CONTINUE' }}
               <mat-icon>arrow_forward</mat-icon>
             </button>
+
+            <!-- Mode Toggle Inside Form -->
             <div class="toggle-mode">
               <span>Already have an account?</span>
               <button class="text-action" type="button" (click)="toggleMode()">Sign in</button>
@@ -152,311 +115,237 @@ import { UserRole } from '../../core/models/app.models';
   `,
   styles: [
     `
-      .login-page {
-        min-height: 100dvh;
-        display: grid;
-        place-items: center;
-        padding: 24px 16px;
-        background: #f3f4f6;
+      :host {
+        display: block;
+        width: 100%;
+        height: 100%;
       }
 
+      /* Main Container - Single Background Pattern */
+      .login-page {
+        min-height: 100dvh;
+        height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        background: 
+          linear-gradient(135deg, rgba(15, 15, 15, 0.9) 0%, rgba(26, 26, 26, 0.95) 100%),
+          url('/assets/bg.jpg');
+        background-size: cover;
+        background-position: center;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+
+      /* Login Card */
       .login-card {
-        width: min(100%, 560px);
-        box-sizing: border-box;
-        border-radius: 32px;
-        background: #f3f4f6;
-        padding: 6px;
-        font-family: 'Inter', Roboto, 'Helvetica Neue', sans-serif;
-        font-size: 16px;
+        position: relative;
+        z-index: 1;
+        width: min(440px, 90%);
+        max-width: 440px;
+        background: #1A1A1A;
+        padding: 40px 35px;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+        border: 1px solid #2C2C2C;
+      }
+
+      /* Desinare Branding */
+      .brand-block {
+        text-align: center;
+        margin-bottom: 28px;
       }
 
       .brand-row {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        margin: 8px 0 32px;
+        gap: 14px;
+        margin: 0 0 10px;
       }
 
-      .brand-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        background: #ff6a2c;
-        color: #ffffff;
-        display: grid;
-        place-items: center;
-      }
-
-      .brand-icon mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+      .brand-logo-image {
+        width: 56px;
+        height: 56px;
+        object-fit: contain;
+        border-radius: 12px;
       }
 
       .brand-name {
-        font-size: 44px;
-        line-height: 1;
-        font-weight: 800;
-        color: #23252f;
-      }
-
-      .header h1 {
-        font-size: clamp(42px, 7vw, 56px);
-        font-weight: 900;
-        color: #23252f;
-      }
-
-      .header p {
-        margin: 10px 0 26px;
-        font-size: 16px;
-        letter-spacing: 0.11em;
-        color: #687282;
+        font-family: 'Playfair Display', 'Times New Roman', serif;
+        font-size: clamp(44px, 6vw, 56px);
+        line-height: 1.1;
+        color: #C5A028;
+        letter-spacing: 0.02em;
         font-weight: 700;
+        font-style: italic;
       }
 
+      .brand-nickname {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.3;
+        color: #A0A0A0;
+        font-style: italic;
+        letter-spacing: 0.02em;
+        font-weight: 400;
+      }
+
+      /* Form Styling */
       .auth-form {
-        display: grid;
-        gap: 10px;
-      }
-
-      .field-label {
-        margin-top: 8px;
-        color: #8b95a5;
-        font-size: 16px;
-        letter-spacing: 0.12em;
-        font-weight: 800;
-      }
-
-      .role-tabs {
-        margin: 6px 0 6px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .role-tab {
-        min-height: 82px;
-        border-radius: 18px;
-        border: 1px solid #e5e7eb;
-        background: #f8fafc;
-        color: #98a2b3;
-        font-size: 16px;
-        letter-spacing: 0.1em;
-        font-weight: 800;
-        display: grid;
-        place-items: center;
-        gap: 4px;
-        cursor: pointer;
-      }
-
-      .role-tab mat-icon {
-        font-size: 21px;
-        width: 21px;
-        height: 21px;
-      }
-
-      .role-tab.active {
-        border-color: #ff6a2c;
-        background: #fef6f0;
-        color: #ff6a2c;
-      }
-
-      .input-shell {
-        border: 1px solid #e5e7eb;
-        border-radius: 24px;
-        min-height: 70px;
-        padding: 0 18px;
         display: flex;
-        align-items: center;
-        gap: 12px;
-        background: #ffffff;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        flex-direction: column;
+        gap: 16px;
       }
 
-      .input-shell mat-icon {
-        color: #98a2b3;
+      .input-group {
+        position: relative;
       }
 
-      .input-shell input {
-        border: none;
-        outline: none;
+      .input-group input {
         width: 100%;
-        font-size: 16px;
-        font-weight: 600;
-        color: #1f2937;
-        background: transparent;
+        height: 54px;
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        border-radius: 12px;
+        padding: 0 18px;
+        font-size: 15px;
+        color: #F0F0F0;
+        font-weight: 500;
+        outline: none;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
       }
 
-      .input-shell input::placeholder {
-        color: #9ca3af;
+      .input-group input::placeholder {
+        color: #A0A0A0;
+        font-weight: 400;
       }
 
-      .icon-btn {
+      .input-group input:focus {
+        background: #2C2C2C;
+        border-color: #C5A028;
+        box-shadow: 0 0 0 3px rgba(197, 160, 40, 0.15);
+      }
+
+      /* Error Message */
+      .error {
+        color: #E06C6C;
+        font-size: 14px;
+        margin: -8px 0 0 0;
+        font-weight: 500;
+      }
+
+      /* Submit Button */
+      .submit-btn {
+        height: 54px;
+        background: #C5A028;
         border: none;
-        background: transparent;
-        display: grid;
-        place-items: center;
-        padding: 0;
-        cursor: pointer;
-      }
-
-      .icon-btn mat-icon {
-        color: #98a2b3;
-      }
-
-      .row-options {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 2px;
-      }
-
-      .remember-me {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #6b7280;
+        border-radius: 12px;
+        color: #0F0F0F;
+        font-size: 14px;
         font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        margin-top: 8px;
       }
 
-      .remember-me input {
+      .submit-btn:hover:not(:disabled) {
+        background: #D4AF37;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(197, 160, 40, 0.3);
+      }
+
+      .submit-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .submit-btn mat-icon {
+        font-size: 20px;
         width: 20px;
         height: 20px;
-        accent-color: #2e3038;
+      }
+
+      /* Toggle Mode - Inside Form */
+      .toggle-mode {
+        border-top: 1px solid #2C2C2C;
+        margin-top: 18px;
+        padding-top: 16px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #A0A0A0;
+        font-weight: 500;
       }
 
       .text-action {
         border: none;
         background: transparent;
-        color: #ff6a2c;
-        font-size: 16px;
-        font-weight: 700;
+        color: #C5A028;
+        font-size: 14px;
+        font-weight: 600;
         cursor: pointer;
+        text-decoration: underline;
+        text-decoration-color: rgba(197, 160, 40, 0.5);
+        text-underline-offset: 3px;
+        padding: 0;
+        transition: all 0.2s ease;
       }
 
-      .submit-btn {
-        margin-top: 8px;
-        min-height: 78px;
-        border: none;
-        border-radius: 24px;
-        background: #2e3038;
-        color: #ffffff;
-        font-size: 16px;
-        letter-spacing: 0.12em;
-        font-weight: 800;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        box-shadow: 0 12px 20px rgba(15, 23, 42, 0.12);
+      .text-action:hover {
+        color: #D4AF37;
+        text-decoration-color: rgba(197, 160, 40, 0.8);
       }
 
-      .submit-btn:disabled {
-        opacity: 0.65;
-        cursor: not-allowed;
-      }
-
-      .submit-btn mat-icon {
-        font-size: 30px;
-        width: 30px;
-        height: 30px;
-      }
-
-      .error {
-        color: #dc2626;
-        margin: 0;
-        text-align: left;
-        font-size: 16px;
-        font-weight: 700;
-      }
-
-      .toggle-mode {
-        border-top: 1px solid #d5d9e1;
-        margin-top: 30px;
-        padding-top: 20px;
-        text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        font-size: 16px;
-        color: #687282;
-        font-weight: 700;
-      }
-
-      .quick-login {
-        margin-top: 14px;
-      }
-
-      .quick-login p {
-        margin: 8px 0 14px;
-        color: #8b95a5;
-        text-align: center;
-        font-size: 16px;
-        letter-spacing: 0.12em;
-        font-weight: 800;
-      }
-
-      .quick-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-      }
-
-      .quick-buttons button {
-        min-width: 96px;
-        height: 34px;
-        border-radius: 999px;
-        border: 1px solid #d5d9e1;
-        background: #f8fafc;
-        color: #687282;
-        font-weight: 700;
-        cursor: pointer;
-      }
-
+      /* Responsive Design */
       @media (max-width: 640px) {
         .login-card {
-          width: min(100%, 460px);
+          width: calc(100% - 24px);
+          padding: 32px 26px;
+          border-radius: 12px;
         }
 
         .brand-name {
-          font-size: 34px;
+          font-size: clamp(38px, 9vw, 48px);
         }
 
-        .header h1 {
-          font-size: clamp(30px, 9vw, 44px);
+        .brand-logo-image {
+          width: 50px;
+          height: 50px;
         }
 
-        .header p {
-          font-size: 16px;
+        .brand-nickname {
+          font-size: 15px;
         }
 
-        .input-shell {
-          min-height: 58px;
-        }
-
-        .input-shell input {
-          font-size: 16px;
+        .input-group input {
+          height: 50px;
         }
 
         .submit-btn {
-          min-height: 58px;
-          font-size: 16px;
+          height: 50px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .login-card {
+          border-radius: 10px;
+          padding: 28px 22px;
         }
 
-        .text-action {
-          font-size: 16px;
-        }
-
-        .error {
-          font-size: 16px;
-        }
-
-        .toggle-mode {
-          font-size: 16px;
-          flex-wrap: wrap;
+        .brand-name {
+          font-size: clamp(34px, 10vw, 42px);
         }
       }
     `
@@ -486,17 +375,11 @@ export class LoginPageComponent {
   });
 
   readonly showPassword = signal(false);
-  readonly registerRole = signal<'customer' | 'staff'>('customer');
 
   toggleMode(): void {
     this.mode.set(this.mode() === 'login' ? 'register' : 'login');
     this.errorMessage.set('');
     this.showPassword.set(false);
-    this.registerRole.set('customer');
-  }
-
-  setRegisterRole(role: 'customer' | 'staff'): void {
-    this.registerRole.set(role);
   }
 
   togglePasswordVisibility(): void {
@@ -505,6 +388,11 @@ export class LoginPageComponent {
 
   onForgotPassword(): void {
     this.errorMessage.set('Tính năng quên mật khẩu sẽ được cập nhật sớm.');
+  }
+
+  onSocialLogin(provider: 'twitter' | 'google' | 'facebook'): void {
+    this.errorMessage.set(`Đăng nhập bằng ${provider} sẽ được cập nhật sớm.`);
+    // TODO: Implement social login integration
   }
 
   onLogin(): void {
@@ -542,8 +430,7 @@ export class LoginPageComponent {
     this.isLoading.set(true);
     this.errorMessage.set('');
     const payload = {
-      ...this.registerForm.getRawValue(),
-      role: this.registerRole()
+      ...this.registerForm.getRawValue()
     };
 
     this.authService.register(payload)
@@ -565,17 +452,6 @@ export class LoginPageComponent {
       });
   }
 
-  quickLogin(role: UserRole): void {
-    const accountMap: Record<UserRole, string> = {
-      admin: 'admin@restaurant.com',
-      staff: 'staff@restaurant.com',
-      customer: 'customer@restaurant.com'
-    };
-
-    this.loginForm.patchValue({ email: accountMap[role], password: 'password123' });
-    this.onLogin();
-  }
-
   private goToRoleHome(role: UserRole): void {
     const routeMap: Record<UserRole, string> = {
       admin: '/admin/dashboard',
@@ -583,7 +459,7 @@ export class LoginPageComponent {
       customer: '/customer/home'
     };
 
-    this.router.navigateByUrl(routeMap[role]);
+    this.router.navigate([routeMap[role]], { replaceUrl: true });
   }
 }
 
