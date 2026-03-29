@@ -54,6 +54,11 @@ const MORNING_SLOTS = buildShiftSlots(10, 14, 'morning');
 const EVENING_SLOTS = buildShiftSlots(17, 22, 'evening');
 const ALL_SLOTS: TimeSlot[] = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
+const SERVICE_SESSIONS = {
+  morning: { cutoffHour: 9,  cutoffMin: 30, endHour: 14 },
+  evening: { cutoffHour: 16, cutoffMin: 0,  endHour: 22 }
+};
+
 @Component({
   selector: 'app-customer-reservation',
   standalone: true,
@@ -219,17 +224,25 @@ const ALL_SLOTS: TimeSlot[] = [...MORNING_SLOTS, ...EVENING_SLOTS];
                 type="button"
                 class="shift-tab"
                 [class.active]="activeShift() === 'morning'"
+                [class.shift-closed]="shiftStatus().morning.closed"
                 (click)="activeShift.set('morning')">
                 <mat-icon>wb_sunny</mat-icon>
                 Ca Sáng (10:00 – 14:00)
+                @if (shiftStatus().morning.closed) {
+                  <span class="shift-closed-badge">Closed</span>
+                }
               </button>
               <button
                 type="button"
                 class="shift-tab"
                 [class.active]="activeShift() === 'evening'"
+                [class.shift-closed]="shiftStatus().evening.closed"
                 (click)="activeShift.set('evening')">
                 <mat-icon>nights_stay</mat-icon>
                 Ca Tối (17:00 – 22:00)
+                @if (shiftStatus().evening.closed) {
+                  <span class="shift-closed-badge">Closed</span>
+                }
               </button>
             </div>
 
@@ -240,6 +253,8 @@ const ALL_SLOTS: TimeSlot[] = [...MORNING_SLOTS, ...EVENING_SLOTS];
                   type="button"
                   class="time-chip"
                   [class.active]="selectedTime() === slot.value"
+                  [class.unavailable]="isSlotPast(slot.value)"
+                  [disabled]="isSlotPast(slot.value)"
                   (click)="selectedTime.set(slot.value)">
                   {{ slot.label }}
                 </button>
@@ -551,6 +566,31 @@ const ALL_SLOTS: TimeSlot[] = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
     .shift-tab mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
+    .shift-tab.shift-closed {
+      border-color: #E06C6C;
+      color: #E06C6C;
+      opacity: 0.7;
+    }
+
+    .shift-closed-badge {
+      margin-left: 6px;
+      padding: 2px 8px;
+      background: rgba(224,108,108,0.15);
+      border: 1px solid #E06C6C;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #E06C6C;
+      text-transform: uppercase;
+    }
+
+    .time-chip.unavailable {
+      background: #1A1A1A;
+      color: #5A5A5A;
+      text-decoration: line-through;
+      cursor: not-allowed;
+    }
+
     /* Selected recap */
     .selected-recap {
       display: flex;
@@ -710,6 +750,18 @@ export class CustomerReservationComponent implements OnInit {
     this.activeShift() === 'morning' ? MORNING_SLOTS : EVENING_SLOTS
   );
 
+  readonly shiftStatus = computed(() => {
+    const isToday = this.selectedDate() === new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentMin = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+    const isClosed = (s: typeof SERVICE_SESSIONS.morning) =>
+      currentMin >= 0 && (currentMin >= s.cutoffHour * 60 + s.cutoffMin || currentMin >= s.endHour * 60);
+    return {
+      morning: { closed: isClosed(SERVICE_SESSIONS.morning) },
+      evening: { closed: isClosed(SERVICE_SESSIONS.evening) }
+    };
+  });
+
   readonly durationLabel = computed(() => {
     const cap = this.selectedTable()?.capacity ?? 0;
     const mins = maxDurationMinutes(cap);
@@ -734,6 +786,16 @@ export class CustomerReservationComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  // ── Helpers ──
+
+  isSlotPast(slotValue: string): boolean {
+    const isToday = this.selectedDate() === new Date().toISOString().split('T')[0];
+    if (!isToday) return false;
+    const [h, m] = slotValue.split(':').map(Number);
+    const now = new Date();
+    return h < now.getHours() || (h === now.getHours() && m <= now.getMinutes());
   }
 
   // ── Navigation ──

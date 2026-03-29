@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,12 @@ import { RouterLink } from '@angular/router';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { MenuService } from '../../core/services/menu.service';
 import { MenuItemResponse } from '../../core/models/app.models';
+import { CustomerReservationFlowService } from '../../core/services/customer-reservation-flow.service';
+
+const HOME_SESSIONS = [
+  { id: 'lunch' as const,  label: 'Lunch Session',  start: 10, end: 14, cutoffHour: 9,  cutoffMin: 30 },
+  { id: 'dinner' as const, label: 'Dinner Session', start: 17, end: 22, cutoffHour: 16, cutoffMin: 0  }
+];
 
 @Component({
   selector: 'app-customer-home',
@@ -811,19 +817,25 @@ import { MenuItemResponse } from '../../core/models/app.models';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CustomerHomeComponent implements OnInit {
+export class CustomerHomeComponent implements OnInit, OnDestroy {
+  // ── Backend data ──
   isLoading = signal(true);
   seasonalItems = signal<MenuItemResponse[]>([]);
   chefDishes = signal<MenuItemResponse[]>([]);
 
-  constructor(private readonly menuService: MenuService) {}
+  // ── Session / clock ──
+  private readonly reservationFlow = inject(CustomerReservationFlowService);
+  private readonly nowMin = signal(this.currentMinOfDay());
+  private readonly clockHandle: ReturnType<typeof setInterval>;
+
+  constructor(private readonly menuService: MenuService) {
+    this.clockHandle = setInterval(() => this.nowMin.set(this.currentMinOfDay()), 60_000);
+  }
 
   ngOnInit(): void {
     this.menuService.getAvailableMenuItems().subscribe({
       next: items => {
-        // Lấy 3 món đầu cho Seasonal Specialties
         this.seasonalItems.set(items.slice(0, 3));
-        // Lấy 3 món tiếp theo cho Chef's Recommendations
         this.chefDishes.set(items.slice(3, 6));
         this.isLoading.set(false);
       },
@@ -833,4 +845,77 @@ export class CustomerHomeComponent implements OnInit {
       }
     });
   }
+
+  ngOnDestroy(): void {
+    clearInterval(this.clockHandle);
+  }
+
+  private currentMinOfDay(): number {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+
+  readonly todayLabel = computed(() => {
+    this.nowMin();
+    const now = new Date();
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+  });
+
+  readonly currentTimeLabel = computed(() => {
+    const totalMin = this.nowMin();
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const dh = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    return `${dh}:${m.toString().padStart(2, '0')} ${period}`;
+  });
+
+  private readonly activeSession = computed(() => {
+    const min = this.nowMin();
+    return HOME_SESSIONS.find(s => min >= s.start * 60 && min < s.end * 60) ?? null;
+  });
+
+  readonly sessionActive = computed(() => !!this.activeSession());
+
+  readonly sessionLabel = computed(() => {
+    const s = this.activeSession();
+    if (s) return s.label;
+    const min = this.nowMin();
+    if (min < HOME_SESSIONS[0].start * 60) return 'Opening Soon';
+    if (min < HOME_SESSIONS[1].start * 60) return 'Afternoon Break';
+    return 'Closed for Tonight';
+  });
+
+  readonly bookingOpen = computed(() => {
+    const min = this.nowMin();
+    return HOME_SESSIONS.some(s => min < s.cutoffHour * 60 + s.cutoffMin && min < s.end * 60);
+  });
+
+  readonly sessionNote = computed(() => {
+    const min = this.nowMin();
+    const s = this.activeSession();
+    if (s) {
+      const cutoff = s.cutoffHour * 60 + s.cutoffMin;
+      if (min < cutoff) {
+        const p = s.cutoffHour >= 12 ? 'PM' : 'AM';
+        const dh = s.cutoffHour > 12 ? s.cutoffHour - 12 : s.cutoffHour;
+        return `Accepting reservations until ${dh}:${s.cutoffMin.toString().padStart(2, '0')} ${p}`;
+      }
+      return `${s.label} in progress · Walk-ins welcome`;
+    }
+    const dinner = HOME_SESSIONS[1];
+    if (min >= HOME_SESSIONS[0].end * 60 && min < dinner.start * 60) {
+      return min < dinner.cutoffHour * 60 + dinner.cutoffMin
+        ? 'Dinner starts at 5:00 PM · Reservations open'
+        : 'Dinner starts at 5:00 PM · Booking closed';
+    }
+    if (min < HOME_SESSIONS[0].start * 60) return 'Lunch begins at 10:00 AM';
+    return 'Restaurant is closed · See you tomorrow';
+  });
+
+  readonly bookableTables = computed(() =>
+    this.reservationFlow.tableLayout().filter(t => t.status === 'available').length
+  );
 }
