@@ -872,18 +872,24 @@ export class CustomerReservationComponent implements OnInit {
   confirmReservation(): void {
     if (!this.selectedTable() || !this.selectedDate() || !this.selectedTime()) return;
 
-    const userRaw = localStorage.getItem('rms-user');
-    const userId = localStorage.getItem('rms-user-id');
+    const userIdStr = localStorage.getItem('rms-user-id');
+    const customerId = userIdStr && !isNaN(Number(userIdStr)) ? Number(userIdStr) : null;
+
+    if (!customerId) {
+      this.submitError.set('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.');
+      this.router.navigateByUrl('/login');
+      return;
+    }
 
     // Build ISO datetime: YYYY-MM-DDTHH:mm:00
     const reservationTime = `${this.selectedDate()}T${this.selectedTime()}:00`;
 
     const payload = {
       tableId: this.selectedTable()!.id,
-      customerId: userId ? Number(userId) : 1,
+      customerId,
       numberOfGuests: this.numberOfGuests(),
       reservationTime,
-      note: this.note || undefined
+      note: this.note.trim() || undefined
     };
 
     this.isSubmitting.set(true);
