@@ -1,15 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  signal
+} from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import {
-  CustomerReservationFlowService,
-  ReservationTableOption
-} from '../../core/services/customer-reservation-flow.service';
+import { ReservationService } from '../../core/services/reservation.service';
+import { TableResponse } from '../../core/models/app.models';
 
 interface DateOption {
   date: Date;
@@ -22,16 +27,40 @@ interface DateOption {
 
 interface TimeSlot {
   label: string;
-  value: string;
-  available: boolean;
-  popular?: boolean;
+  value: string;       // HH:mm
+  shift: 'morning' | 'evening';
 }
+
+// Seat duration rules (minutes)
+function maxDurationMinutes(capacity: number): number {
+  if (capacity <= 3) return 90;
+  if (capacity <= 6) return 120;
+  return 165;
+}
+
+// Generate slots for a shift
+function buildShiftSlots(startH: number, endH: number, shiftKey: 'morning' | 'evening'): TimeSlot[] {
+  const slots: TimeSlot[] = [];
+  for (let h = startH; h < endH; h++) {
+    for (const m of [0, 30]) {
+      const label = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      slots.push({ label, value: label, shift: shiftKey });
+    }
+  }
+  return slots;
+}
+
+const MORNING_SLOTS = buildShiftSlots(10, 14, 'morning');
+const EVENING_SLOTS = buildShiftSlots(17, 22, 'evening');
+const ALL_SLOTS: TimeSlot[] = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
 @Component({
   selector: 'app-customer-reservation',
   standalone: true,
   imports: [
+    CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -64,1134 +93,750 @@ interface TimeSlot {
         }
       </nav>
 
-      <form [formGroup]="form" class="flow-form">
+      <!-- ───── STEP 1: TABLE SELECTION ───── -->
+      @if (currentStep() === 'table') {
+        <mat-card class="step-card">
+          <mat-card-content>
+            <h3 class="card-title">Choose your table</h3>
 
-        <!-- Step 1: Guests -->
-        @if (currentStep() === 'guests') {
-          <mat-card class="step-card">
-            <mat-card-content>
-              <h3 class="card-title">How many guests?</h3>
-
-              <!-- Stepper Control -->
-              <div class="guest-stepper">
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  [disabled]="form.controls.guests.value <= 1"
-                  (click)="decrementGuests()"
-                  aria-label="Decrease guests">
-                  <mat-icon>remove</mat-icon>
-                </button>
-                <span class="guest-count">{{ form.controls.guests.value }} {{ form.controls.guests.value === 1 ? 'guest' : 'guests' }}</span>
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  [disabled]="form.controls.guests.value >= 20"
-                  (click)="incrementGuests()"
-                  aria-label="Increase guests">
-                  <mat-icon>add</mat-icon>
-                </button>
-              </div>
-
-              <!-- Quick Select Chips -->
-              <div class="quick-select">
-                <span class="quick-label">Quick select:</span>
-                @for (size of quickSizes; track size) {
-                  <button
-                    type="button"
-                    class="quick-chip"
-                    [class.active]="form.controls.guests.value === size"
-                    (click)="selectGuests(size)">
-                    {{ size }}
-                  </button>
-                }
-              </div>
-
-              @if (capacityWarning()) {
-                <p class="capacity-warning">
-                  <mat-icon>warning</mat-icon>
-                  {{ capacityWarning() }}
-                </p>
-              }
-
-              <button type="button" class="next-btn" (click)="goToStep('datetime')">
-                Continue
-                <mat-icon>arrow_forward</mat-icon>
-              </button>
-            </mat-card-content>
-          </mat-card>
-        }
-
-        <!-- Step 2: Date & Time -->
-        @if (currentStep() === 'datetime') {
-          <mat-card class="step-card">
-            <mat-card-content>
-              <h3 class="card-title">When would you like to dine?</h3>
-
-              <!-- Date Selection -->
-              <div class="date-section">
-                <label class="section-label">Select Date</label>
-                <div class="date-chips">
-                  @for (d of dateOptions; track d.value) {
-                    <button
-                      type="button"
-                      class="date-chip"
-                      [class.active]="form.controls.date.value === d.value"
-                      [class.today]="d.isToday"
-                      (click)="selectDate(d.value)">
-                      <span class="day-name">{{ d.dayName }}</span>
-                      <span class="day-num">{{ d.dayNum }}</span>
-                      <span class="month-name">{{ d.monthName }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <!-- Time Selection -->
-              <div class="time-section">
-                <label class="section-label">Select Time</label>
-                <div class="time-chips">
-                  @for (slot of timeSlots; track slot.value) {
-                    <button
-                      type="button"
-                      class="time-chip"
-                      [class.active]="form.controls.time.value === slot.value"
-                      [class.unavailable]="!slot.available"
-                      [class.popular]="slot.popular"
-                      [disabled]="!slot.available"
-                      (click)="selectTime(slot.value)">
-                      {{ slot.label }}
-                      @if (slot.popular) {
-                        <span class="popular-badge">Popular</span>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-
-              <button
-                type="button"
-                class="next-btn"
-                [disabled]="!form.controls.date.value || !form.controls.time.value"
-                (click)="goToStep('table')">
-                Continue
-                <mat-icon>arrow_forward</mat-icon>
-              </button>
-            </mat-card-content>
-          </mat-card>
-        }
-
-        <!-- Step 3: Table Selection -->
-        @if (currentStep() === 'table') {
-          <mat-card class="step-card">
-            <mat-card-content>
-              <h3 class="card-title">Choose your table</h3>
-
-              <!-- Area Filter -->
-              <div class="area-filter">
-                @for (area of tableAreas; track area) {
+            <!-- Capacity filter -->
+            <div class="capacity-filter-row">
+              <span class="section-label">Filter by capacity (min. guests):</span>
+              <div class="cap-chips">
+                @for (opt of capacityOptions; track opt) {
                   <button
                     type="button"
                     class="filter-chip"
-                    [class.active]="selectedArea() === area"
-                    (click)="selectedArea.set(area)">
-                    {{ area }}
+                    [class.active]="minCapacity() === opt"
+                    (click)="minCapacity.set(opt)">
+                    {{ opt }}+
                   </button>
                 }
               </div>
+            </div>
 
-              <!-- Floor Plan Grid -->
+            <!-- Status legend -->
+            <div class="legend-row">
+              <span class="legend-item available"><span class="legend-dot"></span>Trống</span>
+              <span class="legend-item booked"><span class="legend-dot"></span>Đã đặt</span>
+            </div>
+
+            <!-- Loading skeleton -->
+            @if (isLoading()) {
+              <div class="floor-plan">
+                @for (i of [1,2,3,4,5,6]; track i) {
+                  <div class="skeleton-table"></div>
+                }
+              </div>
+            }
+
+            <!-- Table grid -->
+            @if (!isLoading()) {
               <div class="floor-plan">
                 @for (table of filteredTables(); track table.id) {
                   <button
                     type="button"
                     class="table-card"
-                    [class.available]="isTableSelectable(table)"
-                    [class.selected]="form.controls.tableId.value === table.id"
-                    [class.occupied]="table.status === 'occupied'"
-                    [class.disabled]="table.status === 'disabled'"
-                    [disabled]="!isTableSelectable(table)"
-                    (click)="selectTable(table.id)"
-                    [attr.aria-label]="'Table ' + table.name + ', capacity ' + table.capacity + ', ' + tableStatusLabel(table)">
+                    [class.available]="table.status === 'trong'"
+                    [class.booked]="table.status === 'da_dat'"
+                    [class.selected]="selectedTableId() === table.id"
+                    [disabled]="table.status !== 'trong'"
+                    (click)="selectTable(table)">
                     <div class="table-icon">
                       <mat-icon>table_restaurant</mat-icon>
                     </div>
-                    <strong class="table-name">{{ table.name }}</strong>
+                    <strong class="table-name">{{ table.tableCode }}</strong>
                     <div class="table-capacity">
                       <mat-icon>people</mat-icon>
-                      <span>{{ table.capacity }}</span>
+                      <span>{{ table.capacity }} người</span>
                     </div>
-                    <span class="table-status">{{ tableStatusLabel(table) }}</span>
-                    @if (form.controls.tableId.value === table.id) {
+                    <span class="table-status">
+                      {{ table.status === 'trong' ? 'Trống' : 'Đã đặt' }}
+                    </span>
+                    @if (selectedTableId() === table.id) {
                       <mat-icon class="check-icon">check_circle</mat-icon>
                     }
                   </button>
                 }
               </div>
 
-              @if (!hasSelectableTable()) {
+              @if (filteredTables().length === 0) {
                 <p class="hint">
                   <mat-icon>info</mat-icon>
-                  No tables for {{ form.controls.guests.value }} guests at {{ form.controls.time.value }}. Try a different time or guest count.
+                  Không có bàn trống phù hợp với bộ lọc hiện tại.
                 </p>
               }
-            </mat-card-content>
-          </mat-card>
-        }
-      </form>
 
-      <!-- Sticky Footer -->
-      <footer class="sticky-footer" [class.visible]="showSummary()">
-        <div class="summary">
-          @if (form.controls.guests.value) {
-            <span class="summary-item">
-              <mat-icon>people</mat-icon>
-              {{ form.controls.guests.value }} {{ form.controls.guests.value === 1 ? 'guest' : 'guests' }}
-            </span>
-          }
-          @if (form.controls.date.value && form.controls.time.value) {
-            <span class="summary-item">
-              <mat-icon>event</mat-icon>
-              {{ formatSelectedDate() }} at {{ form.controls.time.value }}
-            </span>
-          }
-          @if (selectedTableName()) {
+              <button
+                type="button"
+                class="next-btn"
+                [disabled]="!selectedTableId()"
+                (click)="goToStep('datetime')">
+                Tiếp tục
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- ───── STEP 2: DATE & TIME ───── -->
+      @if (currentStep() === 'datetime') {
+        <mat-card class="step-card">
+          <mat-card-content>
+            <h3 class="card-title">Chọn ngày và giờ</h3>
+
+            <!-- Selected table recap -->
+            @if (selectedTable()) {
+              <div class="selected-recap">
+                <mat-icon>table_restaurant</mat-icon>
+                <span>{{ selectedTable()!.tableCode }} · {{ selectedTable()!.capacity }} người · tối đa {{ durationLabel() }}</span>
+              </div>
+            }
+
+            <!-- Date picker -->
+            <div class="date-section">
+              <label class="section-label">Chọn ngày</label>
+              <div class="date-chips">
+                @for (d of dateOptions; track d.value) {
+                  <button
+                    type="button"
+                    class="date-chip"
+                    [class.active]="selectedDate() === d.value"
+                    [class.today]="d.isToday"
+                    (click)="selectedDate.set(d.value)">
+                    <span class="day-name">{{ d.dayName }}</span>
+                    <span class="day-num">{{ d.dayNum }}</span>
+                    <span class="month-name">{{ d.monthName }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Shift tabs -->
+            <div class="shift-tabs">
+              <button
+                type="button"
+                class="shift-tab"
+                [class.active]="activeShift() === 'morning'"
+                (click)="activeShift.set('morning')">
+                <mat-icon>wb_sunny</mat-icon>
+                Ca Sáng (10:00 – 14:00)
+              </button>
+              <button
+                type="button"
+                class="shift-tab"
+                [class.active]="activeShift() === 'evening'"
+                (click)="activeShift.set('evening')">
+                <mat-icon>nights_stay</mat-icon>
+                Ca Tối (17:00 – 22:00)
+              </button>
+            </div>
+
+            <!-- Time slots -->
+            <div class="time-chips">
+              @for (slot of currentShiftSlots(); track slot.value) {
+                <button
+                  type="button"
+                  class="time-chip"
+                  [class.active]="selectedTime() === slot.value"
+                  (click)="selectedTime.set(slot.value)">
+                  {{ slot.label }}
+                </button>
+              }
+            </div>
+
+            <!-- Number of guests -->
+            <div class="guests-row">
+              <label class="section-label">Số khách</label>
+              <div class="guest-stepper">
+                <button
+                  type="button"
+                  class="stepper-btn"
+                  [disabled]="numberOfGuests() <= 2"
+                  (click)="numberOfGuests.set(numberOfGuests() - 1)">
+                  <mat-icon>remove</mat-icon>
+                </button>
+                <span class="guest-count">{{ numberOfGuests() }} người</span>
+                <button
+                  type="button"
+                  class="stepper-btn"
+                  [disabled]="numberOfGuests() >= (selectedTable()?.capacity ?? 2)"
+                  (click)="numberOfGuests.set(numberOfGuests() + 1)">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Note -->
+            <mat-form-field class="notes-field" appearance="outline">
+              <mat-label>Ghi chú (tùy chọn)</mat-label>
+              <textarea matInput rows="2" [(ngModel)]="note" [ngModelOptions]="{standalone: true}"></textarea>
+            </mat-form-field>
+
+            <button
+              type="button"
+              class="next-btn"
+              [disabled]="!selectedDate() || !selectedTime()"
+              (click)="confirmReservation()">
+              @if (isSubmitting()) {
+                Đang đặt bàn...
+              } @else {
+                Xác nhận đặt bàn
+              }
+              <mat-icon>check</mat-icon>
+            </button>
+
+            @if (submitError()) {
+              <p class="error-msg">
+                <mat-icon>error_outline</mat-icon>
+                {{ submitError() }}
+              </p>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- ───── SUCCESS STATE ───── -->
+      @if (currentStep() === 'success') {
+        <mat-card class="step-card success-card">
+          <mat-card-content>
+            <div class="success-icon">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <h3 class="card-title">Đặt bàn thành công!</h3>
+            <div class="success-details">
+              <div class="detail-row">
+                <mat-icon>table_restaurant</mat-icon>
+                <span>{{ selectedTable()?.tableCode }}</span>
+              </div>
+              <div class="detail-row">
+                <mat-icon>event</mat-icon>
+                <span>{{ formatConfirmedDateTime() }}</span>
+              </div>
+              <div class="detail-row">
+                <mat-icon>people</mat-icon>
+                <span>{{ numberOfGuests() }} người</span>
+              </div>
+              <div class="detail-row">
+                <mat-icon>timer</mat-icon>
+                <span>Thời gian tối đa: {{ durationLabel() }}</span>
+              </div>
+            </div>
+            <p class="success-note">Nhà hàng sẽ xác nhận đặt bàn sớm nhất có thể. Cảm ơn bạn!</p>
+            <button type="button" class="next-btn" (click)="resetFlow()">
+              Đặt bàn khác
+              <mat-icon>refresh</mat-icon>
+            </button>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Sticky Summary Footer -->
+      @if (currentStep() === 'datetime' && selectedTable()) {
+        <footer class="sticky-footer visible">
+          <div class="summary">
             <span class="summary-item">
               <mat-icon>table_restaurant</mat-icon>
-              {{ selectedTableName() }}
+              {{ selectedTable()!.tableCode }}
             </span>
-          }
-        </div>
-        <button
-          type="button"
-          class="confirm-btn"
-          [disabled]="!canConfirm()"
-          (click)="confirmReservation()">
-          Confirm Reservation
-        </button>
-      </footer>
+            @if (selectedDate() && selectedTime()) {
+              <span class="summary-item">
+                <mat-icon>event</mat-icon>
+                {{ selectedDate() }} lúc {{ selectedTime() }}
+              </span>
+            }
+          </div>
+        </footer>
+      }
     </section>
   `,
-  styles: [
-    `
-      .reservation-flow {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        background: #0F0F0F;
-        min-height: 100vh;
-        padding: 20px;
-        padding-bottom: 140px;
-      }
-
-      /* Header */
-      .heading h2 {
-        margin: 0;
-        color: #F0F0F0;
-        font-size: 28px;
-        font-weight: 700;
-        text-align: center;
-      }
-
-      /* Horizontal Stepper */
-      .stepper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0;
-        padding: 16px 0;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-
-      .step-btn {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        padding: 8px 12px;
-        transition: all 0.2s ease;
-        flex-shrink: 0;
-      }
-
-      .step-btn:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-
-      .step-num {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: #242424;
-        border: 2px solid #2C2C2C;
-        color: #A0A0A0;
-        display: grid;
-        place-items: center;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.2s ease;
-      }
-
-      .step-btn.active .step-num {
-        background: #C5A028;
-        border-color: #C5A028;
-        color: #0F0F0F;
-      }
-
-      .step-btn.completed .step-num {
-        background: #2BAE66;
-        border-color: #2BAE66;
-        color: #FFFFFF;
-      }
-
-      .step-label {
-        font-size: 12px;
-        color: #A0A0A0;
-        font-weight: 500;
-        white-space: nowrap;
-      }
-
-      .step-btn.active .step-label {
-        color: #C5A028;
-      }
-
-      .step-btn.completed .step-label {
-        color: #2BAE66;
-      }
-
-      .step-connector {
-        width: 40px;
-        height: 2px;
-        background: #2C2C2C;
-        flex-shrink: 0;
-      }
-
-      .step-connector.completed {
-        background: #2BAE66;
-      }
-
-      /* Step Card */
-      .step-card {
-        border-radius: 16px;
-        background: #1A1A1A;
-        border: 1px solid #2C2C2C;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      }
-
-      .card-title {
-        margin: 0 0 20px;
-        font-size: 20px;
-        color: #F0F0F0;
-        font-weight: 600;
-        text-align: center;
-      }
-
-      /* Guest Stepper */
-      .guest-stepper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 24px;
-        margin-bottom: 24px;
-      }
-
-      .stepper-btn {
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: #242424;
-        border: 2px solid #C5A028;
-        color: #C5A028;
-        cursor: pointer;
-        display: grid;
-        place-items: center;
-        transition: all 0.2s ease;
-      }
-
-      .stepper-btn:hover:not(:disabled) {
-        background: #C5A028;
-        color: #0F0F0F;
-      }
-
-      .stepper-btn:disabled {
-        border-color: #2C2C2C;
-        color: #5A5A5A;
-        cursor: not-allowed;
-      }
-
-      .stepper-btn mat-icon {
-        font-size: 28px;
-        width: 28px;
-        height: 28px;
-      }
-
-      .guest-count {
-        font-size: 24px;
-        font-weight: 700;
-        color: #C5A028;
-        min-width: 100px;
-        text-align: center;
-      }
-
-      /* Quick Select */
-      .quick-select {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-
-      .quick-label {
-        font-size: 14px;
-        color: #A0A0A0;
-      }
-
-      .quick-chip {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        background: #242424;
-        border: 1px solid #2C2C2C;
-        color: #F0F0F0;
-        font-weight: 600;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .quick-chip:hover {
-        border-color: #C5A028;
-      }
-
-      .quick-chip.active {
-        background: #C5A028;
-        border-color: #C5A028;
-        color: #0F0F0F;
-      }
-
-      .capacity-warning {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin: 0 0 16px;
-        padding: 12px;
-        background: rgba(224, 108, 108, 0.1);
-        border: 1px solid #E06C6C;
-        border-radius: 8px;
-        color: #E06C6C;
-        font-size: 14px;
-      }
-
-      .capacity-warning mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-
-      /* Next Button */
-      .next-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        width: 100%;
-        padding: 16px;
-        border-radius: 12px;
-        background: #C5A028;
-        border: none;
-        color: #0F0F0F;
-        font-weight: 600;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .next-btn:hover:not(:disabled) {
-        background: #D4AF37;
-      }
-
-      .next-btn:disabled {
-        background: #242424;
-        color: #5A5A5A;
-        cursor: not-allowed;
-      }
-
-      /* Date Section */
-      .section-label {
-        display: block;
-        font-size: 14px;
-        color: #A0A0A0;
-        margin-bottom: 12px;
-        font-weight: 500;
-      }
-
-      .date-section {
-        margin-bottom: 24px;
-      }
-
-      .date-chips {
-        display: flex;
-        gap: 10px;
-        overflow-x: auto;
-        padding-bottom: 8px;
-        -webkit-overflow-scrolling: touch;
-      }
-
-      .date-chips::-webkit-scrollbar {
-        height: 4px;
-      }
-
-      .date-chips::-webkit-scrollbar-track {
-        background: #1A1A1A;
-      }
-
-      .date-chips::-webkit-scrollbar-thumb {
-        background: #2C2C2C;
-        border-radius: 2px;
-      }
-
-      .date-chip {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        padding: 12px 16px;
-        min-width: 70px;
-        background: #242424;
-        border: 1px solid #2C2C2C;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        flex-shrink: 0;
-      }
-
-      .date-chip:hover {
-        border-color: #C5A028;
-      }
-
-      .date-chip.active {
-        background: #C5A028;
-        border-color: #C5A028;
-      }
-
-      .date-chip.today {
-        border-color: #2BAE66;
-      }
-
-      .date-chip .day-name {
-        font-size: 11px;
-        color: #A0A0A0;
-        text-transform: uppercase;
-        font-weight: 500;
-      }
-
-      .date-chip .day-num {
-        font-size: 20px;
-        font-weight: 700;
-        color: #F0F0F0;
-      }
-
-      .date-chip .month-name {
-        font-size: 11px;
-        color: #A0A0A0;
-        text-transform: uppercase;
-      }
-
-      .date-chip.active .day-name,
-      .date-chip.active .day-num,
-      .date-chip.active .month-name {
-        color: #0F0F0F;
-      }
-
-      /* Time Section */
-      .time-section {
-        margin-bottom: 24px;
-      }
-
-      .time-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .time-chip {
-        position: relative;
-        padding: 12px 20px;
-        background: #242424;
-        border: 1px solid #2C2C2C;
-        border-radius: 20px;
-        color: #F0F0F0;
-        font-weight: 500;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .time-chip:hover:not(:disabled) {
-        border-color: #C5A028;
-      }
-
-      .time-chip.active {
-        background: #C5A028;
-        border-color: #C5A028;
-        color: #0F0F0F;
-      }
-
-      .time-chip.unavailable {
-        background: #1A1A1A;
-        color: #5A5A5A;
-        text-decoration: line-through;
-        cursor: not-allowed;
-      }
-
-      .time-chip.popular {
-        border-color: #C5A028;
-      }
-
-      .popular-badge {
-        position: absolute;
-        top: -8px;
-        right: -4px;
-        padding: 2px 6px;
-        background: #C5A028;
-        border-radius: 8px;
-        font-size: 9px;
-        font-weight: 600;
-        color: #0F0F0F;
-        text-transform: uppercase;
-      }
-
-      /* Area Filter */
-      .area-filter {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-        overflow-x: auto;
-        padding-bottom: 4px;
-      }
-
-      .filter-chip {
-        padding: 8px 16px;
-        background: #242424;
-        border: 1px solid #2C2C2C;
-        border-radius: 20px;
-        color: #F0F0F0;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-
-      .filter-chip:hover {
-        border-color: #C5A028;
-      }
-
-      .filter-chip.active {
-        background: #C5A028;
-        border-color: #C5A028;
-        color: #0F0F0F;
-      }
-
-      /* Floor Plan */
-      .floor-plan {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
-      }
-
-      .table-card {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        padding: 16px;
-        min-height: 140px;
-        background: #242424;
-        border: 2px solid #2C2C2C;
-        border-radius: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .table-card.available {
-        border-color: #2BAE66;
-      }
-
-      .table-card.available:hover {
-        background: #2C2C2C;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(43, 174, 102, 0.2);
-      }
-
-      .table-card.selected {
-        background: #C5A028;
-        border-color: #C5A028;
-      }
-
-      .table-card.selected .table-icon,
-      .table-card.selected .table-name,
-      .table-card.selected .table-capacity,
-      .table-card.selected .table-status {
-        color: #0F0F0F;
-      }
-
-      .table-card.occupied,
-      .table-card.disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-        border-color: #2C2C2C;
-      }
-
-      .table-icon {
-        color: #A0A0A0;
-      }
-
-      .table-icon mat-icon {
-        font-size: 32px;
-        width: 32px;
-        height: 32px;
-      }
-
-      .table-name {
-        font-size: 16px;
-        font-weight: 600;
-        color: #F0F0F0;
-      }
-
-      .table-capacity {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 13px;
-        color: #A0A0A0;
-      }
-
-      .table-capacity mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
-
-      .table-status {
-        font-size: 11px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .table-card.available .table-status {
-        color: #2BAE66;
-      }
-
-      .table-card.occupied .table-status {
-        color: #E06C6C;
-      }
-
-      .check-icon {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        color: #0F0F0F;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-
-      /* Hint */
-      .hint {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin: 16px 0 0;
-        padding: 12px;
-        background: rgba(224, 108, 108, 0.1);
-        border-radius: 8px;
-        color: #E06C6C;
-        font-size: 14px;
-      }
-
-      .hint mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-      }
-
-      /* Notes Field */
-      .notes-field {
-        width: 100%;
-      }
-
-      ::ng-deep .notes-field .mat-mdc-text-field-wrapper {
-        background: #242424;
-        border-radius: 12px;
-      }
-
-      ::ng-deep .mat-mdc-form-field-label,
-      ::ng-deep .mat-mdc-input-element {
-        color: #F0F0F0 !important;
-      }
-
-      ::ng-deep .mat-mdc-notch-piece {
-        border-color: #2C2C2C !important;
-      }
-
-      ::ng-deep .mat-focused .mat-mdc-notch-piece {
-        border-color: #C5A028 !important;
-      }
-
-      /* Sticky Footer */
-      .sticky-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: #1A1A1A;
-        border-top: 1px solid #2C2C2C;
-        padding: 16px 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        transform: translateY(100%);
-        transition: transform 0.3s ease;
-        z-index: 100;
-      }
-
-      .sticky-footer.visible {
-        transform: translateY(0);
-      }
-
-      .summary {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        justify-content: center;
-      }
-
-      .summary-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13px;
-        color: #A0A0A0;
-      }
-
-      .summary-item mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        color: #C5A028;
-      }
-
-      .confirm-btn {
-        width: 100%;
-        padding: 16px;
-        border-radius: 12px;
-        background: #C5A028;
-        border: none;
-        color: #0F0F0F;
-        font-weight: 600;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .confirm-btn:hover:not(:disabled) {
-        background: #D4AF37;
-      }
-
-      .confirm-btn:disabled {
-        background: #242424;
-        color: #5A5A5A;
-        cursor: not-allowed;
-      }
-
-      /* Mobile Adjustments */
-      @media (max-width: 640px) {
-        .reservation-flow {
-          padding: 16px;
-          padding-bottom: 160px;
-        }
-
-        .stepper {
-          justify-content: flex-start;
-          padding: 12px 0;
-        }
-
-        .step-connector {
-          width: 24px;
-        }
-
-        .floor-plan {
-          grid-template-columns: repeat(2, 1fr);
-        }
-      }
-
-      /* Focus States */
-      .step-btn:focus-visible .step-num,
-      .stepper-btn:focus-visible,
-      .quick-chip:focus-visible,
-      .date-chip:focus-visible,
-      .time-chip:focus-visible,
-      .filter-chip:focus-visible,
-      .table-card:focus-visible,
-      .next-btn:focus-visible,
-      .confirm-btn:focus-visible {
-        outline: 2px solid #C5A028;
-        outline-offset: 2px;
-      }
-    `
-  ],
+  styles: [`
+    .reservation-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #0F0F0F;
+      min-height: 100vh;
+      padding: 20px;
+      padding-bottom: 120px;
+    }
+
+    /* Header */
+    .heading h2 {
+      margin: 0;
+      color: #F0F0F0;
+      font-size: 28px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    /* Stepper */
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 0;
+      overflow-x: auto;
+    }
+
+    .step-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .step-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #242424;
+      border: 2px solid #2C2C2C;
+      color: #A0A0A0;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .step-btn.active .step-num { background: #C5A028; border-color: #C5A028; color: #0F0F0F; }
+    .step-btn.completed .step-num { background: #2BAE66; border-color: #2BAE66; color: #fff; }
+
+    .step-label { font-size: 12px; color: #A0A0A0; font-weight: 500; white-space: nowrap; }
+    .step-btn.active .step-label { color: #C5A028; }
+    .step-btn.completed .step-label { color: #2BAE66; }
+
+    .step-connector { width: 40px; height: 2px; background: #2C2C2C; flex-shrink: 0; }
+    .step-connector.completed { background: #2BAE66; }
+
+    /* Step Card */
+    .step-card {
+      border-radius: 16px;
+      background: #1A1A1A;
+      border: 1px solid #2C2C2C;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .card-title {
+      margin: 0 0 20px;
+      font-size: 20px;
+      color: #F0F0F0;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* Capacity filter */
+    .capacity-filter-row {
+      margin-bottom: 16px;
+    }
+
+    .cap-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    /* Legend */
+    .legend-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #A0A0A0;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-item.available .legend-dot { background: #2BAE66; }
+    .legend-item.booked .legend-dot { background: #E06C6C; }
+
+    /* Floor Plan */
+    .floor-plan {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .table-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 16px 12px;
+      min-height: 130px;
+      background: #242424;
+      border: 2px solid #2C2C2C;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .table-card.available { border-color: #2BAE66; }
+    .table-card.available:hover { background: #2C2C2C; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(43,174,102,0.2); }
+    .table-card.booked { opacity: 0.45; cursor: not-allowed; border-color: #E06C6C; }
+    .table-card.selected { background: #C5A028; border-color: #C5A028; }
+    .table-card.selected .table-icon,
+    .table-card.selected .table-name,
+    .table-card.selected .table-capacity,
+    .table-card.selected .table-status { color: #0F0F0F; }
+
+    .table-icon { color: #A0A0A0; }
+    .table-icon mat-icon { font-size: 32px; width: 32px; height: 32px; }
+    .table-name { font-size: 15px; font-weight: 600; color: #F0F0F0; }
+    .table-capacity { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #A0A0A0; }
+    .table-capacity mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .table-status { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-card.available .table-status { color: #2BAE66; }
+    .table-card.booked .table-status { color: #E06C6C; }
+
+    .check-icon { position: absolute; top: 6px; right: 6px; color: #0F0F0F; font-size: 18px; width: 18px; height: 18px; }
+
+    /* Section label */
+    .section-label { display: block; font-size: 13px; color: #A0A0A0; margin-bottom: 8px; font-weight: 500; }
+
+    /* Filter / shift chips */
+    .filter-chip, .shift-tab {
+      padding: 8px 16px;
+      background: #242424;
+      border: 1px solid #2C2C2C;
+      border-radius: 20px;
+      color: #F0F0F0;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .filter-chip:hover, .shift-tab:hover { border-color: #C5A028; }
+    .filter-chip.active, .shift-tab.active { background: #C5A028; border-color: #C5A028; color: #0F0F0F; }
+
+    /* Shift tabs */
+    .shift-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .shift-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 12px;
+      padding: 10px 16px;
+    }
+
+    .shift-tab mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    /* Selected recap */
+    .selected-recap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: rgba(197,160,40,0.1);
+      border: 1px solid #C5A028;
+      border-radius: 10px;
+      color: #C5A028;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    /* Date chips */
+    .date-section { margin-bottom: 20px; }
+    .date-chips { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+    .date-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 12px 14px; min-width: 64px; background: #242424;
+      border: 1px solid #2C2C2C; border-radius: 12px; cursor: pointer;
+      transition: all 0.2s ease; flex-shrink: 0;
+    }
+    .date-chip:hover { border-color: #C5A028; }
+    .date-chip.active { background: #C5A028; border-color: #C5A028; }
+    .date-chip.today { border-color: #2BAE66; }
+    .date-chip .day-name { font-size: 10px; color: #A0A0A0; text-transform: uppercase; }
+    .date-chip .day-num { font-size: 20px; font-weight: 700; color: #F0F0F0; }
+    .date-chip .month-name { font-size: 10px; color: #A0A0A0; text-transform: uppercase; }
+    .date-chip.active .day-name, .date-chip.active .day-num, .date-chip.active .month-name { color: #0F0F0F; }
+
+    /* Time chips */
+    .time-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .time-chip {
+      padding: 10px 18px; background: #242424; border: 1px solid #2C2C2C;
+      border-radius: 20px; color: #F0F0F0; font-weight: 500; font-size: 14px;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .time-chip:hover { border-color: #C5A028; }
+    .time-chip.active { background: #C5A028; border-color: #C5A028; color: #0F0F0F; }
+
+    /* Guest stepper */
+    .guests-row { margin-bottom: 20px; }
+    .guest-stepper { display: flex; align-items: center; gap: 20px; margin-top: 8px; }
+    .stepper-btn {
+      width: 44px; height: 44px; border-radius: 50%; background: #242424;
+      border: 2px solid #C5A028; color: #C5A028; cursor: pointer;
+      display: grid; place-items: center; transition: all 0.2s ease;
+    }
+    .stepper-btn:hover:not(:disabled) { background: #C5A028; color: #0F0F0F; }
+    .stepper-btn:disabled { border-color: #2C2C2C; color: #5A5A5A; cursor: not-allowed; }
+    .stepper-btn mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .guest-count { font-size: 20px; font-weight: 700; color: #C5A028; min-width: 80px; text-align: center; }
+
+    /* Notes */
+    .notes-field { width: 100%; margin-bottom: 4px; }
+    ::ng-deep .notes-field .mat-mdc-text-field-wrapper { background: #242424; border-radius: 12px; }
+    ::ng-deep .mat-mdc-form-field-label, ::ng-deep .mat-mdc-input-element { color: #F0F0F0 !important; }
+    ::ng-deep .mat-mdc-notch-piece { border-color: #2C2C2C !important; }
+    ::ng-deep .mat-focused .mat-mdc-notch-piece { border-color: #C5A028 !important; }
+
+    /* Buttons */
+    .next-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 16px; border-radius: 12px; background: #C5A028;
+      border: none; color: #0F0F0F; font-weight: 600; font-size: 16px;
+      cursor: pointer; transition: all 0.2s ease; margin-top: 8px;
+    }
+    .next-btn:hover:not(:disabled) { background: #D4AF37; }
+    .next-btn:disabled { background: #242424; color: #5A5A5A; cursor: not-allowed; }
+
+    /* Error */
+    .error-msg {
+      display: flex; align-items: center; gap: 8px; margin-top: 12px;
+      padding: 12px; background: rgba(224,108,108,0.1);
+      border: 1px solid #E06C6C; border-radius: 8px; color: #E06C6C; font-size: 14px;
+    }
+
+    /* Hint */
+    .hint {
+      display: flex; align-items: center; gap: 8px; padding: 12px;
+      background: rgba(224,108,108,0.1); border-radius: 8px;
+      color: #E06C6C; font-size: 14px; margin-bottom: 16px;
+    }
+
+    /* Success card */
+    .success-card { text-align: center; }
+    .success-icon mat-icon { font-size: 64px; width: 64px; height: 64px; color: #2BAE66; }
+    .success-details { display: flex; flex-direction: column; gap: 12px; margin: 20px 0; text-align: left; }
+    .detail-row { display: flex; align-items: center; gap: 10px; color: #F0F0F0; font-size: 15px; }
+    .detail-row mat-icon { color: #C5A028; flex-shrink: 0; }
+    .success-note { color: #A0A0A0; font-size: 14px; margin-bottom: 20px; }
+
+    /* Skeleton */
+    .skeleton-table {
+      height: 130px; border-radius: 16px;
+      background: linear-gradient(90deg, #242424 25%, #2C2C2C 50%, #242424 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Sticky Footer */
+    .sticky-footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1A1A1A; border-top: 1px solid #2C2C2C;
+      padding: 12px 20px; z-index: 100;
+    }
+    .summary { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
+    .summary-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #A0A0A0; }
+    .summary-item mat-icon { font-size: 16px; width: 16px; height: 16px; color: #C5A028; }
+
+    @media (max-width: 640px) {
+      .reservation-flow { padding: 16px; padding-bottom: 120px; }
+      .floor-plan { grid-template-columns: repeat(2, 1fr); }
+      .shift-tabs { flex-direction: column; }
+    }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CustomerReservationComponent {
-  readonly form = this.fb.nonNullable.group({
-    guests: [2, [Validators.required, Validators.min(1), Validators.max(20)]],
-    date: ['', [Validators.required]],
-    time: ['', [Validators.required]],
-    tableId: [0, [Validators.required, Validators.min(1)]]
-  });
+export class CustomerReservationComponent implements OnInit {
+
+  // ── State ──
+  currentStep = signal<'table' | 'datetime' | 'success'>('table');
+  isLoading = signal(true);
+  isSubmitting = signal(false);
+  submitError = signal<string | null>(null);
+
+  allTables = signal<TableResponse[]>([]);
+  selectedTableId = signal<number | null>(null);
+  selectedTable = signal<TableResponse | null>(null);
+
+  minCapacity = signal<number>(2);
+  selectedDate = signal<string>('');
+  selectedTime = signal<string>('');
+  numberOfGuests = signal<number>(2);
+  activeShift = signal<'morning' | 'evening'>('morning');
+  note = '';
+
+  readonly capacityOptions = [2, 4, 6, 8, 10];
 
   readonly steps = [
-    { id: 'guests', label: 'Guests' },
-    { id: 'datetime', label: 'Date & Time' },
-    { id: 'table', label: 'Table' }
+    { id: 'table', label: 'Chọn bàn' },
+    { id: 'datetime', label: 'Thời gian' },
   ] as const;
 
-  readonly currentStep = signal<'guests' | 'datetime' | 'table'>('guests');
-  readonly selectedArea = signal('All');
-  readonly quickSizes = [2, 4, 6];
-  readonly tableAreas = ['All', 'Indoor', 'Outdoor', 'VIP'];
-
-  readonly tableLayout = this.reservationFlow.tableLayout;
-
   readonly dateOptions: DateOption[] = this.generateDateOptions();
-  readonly timeSlots: TimeSlot[] = this.generateTimeSlots();
+
+  // ── Computed ──
 
   readonly filteredTables = computed(() => {
-    const area = this.selectedArea();
-    const tables = this.tableLayout();
-    if (area === 'All') return tables;
-    return tables.filter(t => t.area === area);
+    const min = this.minCapacity();
+    return this.allTables().filter(t => t.capacity >= min);
   });
 
-  readonly hasSelectableTable = computed(() =>
-    this.tableLayout().some(table => this.isTableSelectable(table))
+  readonly currentShiftSlots = computed((): TimeSlot[] =>
+    this.activeShift() === 'morning' ? MORNING_SLOTS : EVENING_SLOTS
   );
 
-  readonly capacityWarning = computed(() => {
-    const guests = this.form.controls.guests.value;
-    const maxCapacity = Math.max(...this.tableLayout().map(t => t.capacity));
-    if (guests > maxCapacity) {
-      return `Maximum table capacity is ${maxCapacity} guests. Consider splitting into multiple tables.`;
-    }
-    return null;
-  });
-
-  readonly selectedTableName = computed(() => {
-    const tableId = this.form.controls.tableId.value;
-    const table = this.tableLayout().find(t => t.id === tableId);
-    return table?.name || null;
-  });
-
-  readonly showSummary = computed(() => {
-    return this.form.controls.guests.value > 0;
-  });
-
-  readonly canConfirm = computed(() => {
-    return (
-      this.form.controls.date.valid &&
-      this.form.controls.time.valid &&
-      this.form.controls.tableId.valid &&
-      this.form.controls.tableId.value > 0 &&
-      this.hasSelectableTable()
-    );
+  readonly durationLabel = computed(() => {
+    const cap = this.selectedTable()?.capacity ?? 0;
+    const mins = maxDurationMinutes(cap);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h} tiếng ${m} phút` : `${h} tiếng`;
   });
 
   constructor(
-    private readonly fb: FormBuilder,
+    private readonly reservationService: ReservationService,
     private readonly router: Router,
-    private readonly reservationFlow: CustomerReservationFlowService
+    private readonly fb: FormBuilder
   ) {}
 
-  // Step Navigation
-  goToStep(step: 'guests' | 'datetime' | 'table'): void {
-    if (this.canAccessStep(step)) {
-      this.currentStep.set(step);
+  ngOnInit(): void {
+    this.reservationService.getAvailableTables().subscribe({
+      next: tables => {
+        this.allTables.set(tables);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  // ── Navigation ──
+
+  goToStep(step: 'table' | 'datetime' | 'success'): void {
+    this.currentStep.set(step);
+  }
+
+  isStepCompleted(stepId: string): boolean {
+    if (stepId === 'table') return !!this.selectedTableId() && this.currentStep() !== 'table';
+    if (stepId === 'datetime') return !!this.selectedDate() && !!this.selectedTime() && this.currentStep() === 'success';
+    return false;
+  }
+
+  canAccessStep(stepId: string): boolean {
+    if (stepId === 'table') return true;
+    if (stepId === 'datetime') return !!this.selectedTableId();
+    return false;
+  }
+
+  // ── Table Selection ──
+
+  selectTable(table: TableResponse): void {
+    if (table.status !== 'trong') return;
+    this.selectedTableId.set(table.id);
+    this.selectedTable.set(table);
+    // Ensure guests don't exceed capacity
+    if (this.numberOfGuests() > table.capacity) {
+      this.numberOfGuests.set(table.capacity);
     }
   }
 
-  canAccessStep(step: string): boolean {
-    switch (step) {
-      case 'guests':
-        return true;
-      case 'datetime':
-        return this.form.controls.guests.value > 0;
-      case 'table':
-        return !!this.form.controls.date.value && !!this.form.controls.time.value;
-      default:
-        return false;
-    }
-  }
-
-  isStepCompleted(step: string): boolean {
-    switch (step) {
-      case 'guests':
-        return this.form.controls.guests.value > 0 && this.currentStep() !== 'guests';
-      case 'datetime':
-        return !!this.form.controls.date.value && !!this.form.controls.time.value && this.currentStep() !== 'datetime';
-      case 'table':
-        return this.form.controls.tableId.value > 0 && this.currentStep() !== 'table';
-      default:
-        return false;
-    }
-  }
-
-  // Guest Selection
-  selectGuests(guests: number): void {
-    this.form.controls.guests.setValue(guests);
-    this.validateTableSelection();
-  }
-
-  incrementGuests(): void {
-    const current = this.form.controls.guests.value;
-    if (current < 20) {
-      this.form.controls.guests.setValue(current + 1);
-      this.validateTableSelection();
-    }
-  }
-
-  decrementGuests(): void {
-    const current = this.form.controls.guests.value;
-    if (current > 1) {
-      this.form.controls.guests.setValue(current - 1);
-      this.validateTableSelection();
-    }
-  }
-
-  private validateTableSelection(): void {
-    const selectedTableId = this.form.controls.tableId.value;
-    const selectedTable = this.tableLayout().find(table => table.id === selectedTableId);
-    if (selectedTable && !this.isTableSelectable(selectedTable)) {
-      this.form.controls.tableId.setValue(0);
-    }
-  }
-
-  // Date Selection
-  selectDate(date: string): void {
-    this.form.controls.date.setValue(date);
-  }
+  // ── Date helpers ──
 
   private generateDateOptions(): DateOption[] {
     const options: DateOption[] = [];
     const today = new Date();
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
+    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const months = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
     for (let i = 0; i < 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-
-      const value = date.toISOString().split('T')[0];
-
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
       options.push({
-        date,
-        dayName: days[date.getDay()],
-        dayNum: date.getDate(),
-        monthName: months[date.getMonth()],
-        value,
+        date: d,
+        dayName: days[d.getDay()],
+        dayNum: d.getDate(),
+        monthName: months[d.getMonth()],
+        value: d.toISOString().split('T')[0],
         isToday: i === 0
       });
     }
     return options;
   }
 
-  formatSelectedDate(): string {
-    const dateStr = this.form.controls.date.value;
-    if (!dateStr) return '';
-
-    const date = new Date(dateStr);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+  formatConfirmedDateTime(): string {
+    if (!this.selectedDate() || !this.selectedTime()) return '';
+    return `${this.selectedDate()} lúc ${this.selectedTime()}`;
   }
 
-  // Time Selection
-  selectTime(time: string): void {
-    this.form.controls.time.setValue(time);
-  }
+  // ── Submit Reservation ──
 
-  private generateTimeSlots(): TimeSlot[] {
-    const slots: TimeSlot[] = [];
-    const popularTimes = ['19:00', '19:30', '20:00'];
-
-    for (let hour = 11; hour <= 21; hour++) {
-      for (const min of ['00', '30']) {
-        if (hour === 21 && min === '30') continue;
-
-        const time = `${hour.toString().padStart(2, '0')}:${min}`;
-        const label = this.formatTime(hour, parseInt(min));
-
-        slots.push({
-          label,
-          value: time,
-          available: Math.random() > 0.2,
-          popular: popularTimes.includes(time)
-        });
-      }
-    }
-    return slots;
-  }
-
-  private formatTime(hour: number, min: number): string {
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    return `${displayHour}:${min.toString().padStart(2, '0')} ${period}`;
-  }
-
-  // Table Selection
-  selectTable(tableId: number): void {
-    this.form.controls.tableId.setValue(tableId);
-  }
-
-  tableStatusLabel(table: ReservationTableOption): string {
-    if (table.status === 'disabled') return 'Not Available';
-    if (table.status === 'occupied') return 'Occupied';
-    return 'Available';
-  }
-
-  isTableSelectable(table: ReservationTableOption): boolean {
-    return table.status === 'available' && table.capacity >= this.form.controls.guests.value;
-  }
-
-  // Confirmation - submits booking and navigates to Profile
   confirmReservation(): void {
-    if (!this.canConfirm()) return;
+    if (!this.selectedTable() || !this.selectedDate() || !this.selectedTime()) return;
 
-    const selectedTable = this.tableLayout().find(
-      table => table.id === this.form.controls.tableId.value
-    );
-    if (!selectedTable) return;
+    const userRaw = localStorage.getItem('rms-user');
+    const userId = localStorage.getItem('rms-user-id');
 
-    this.reservationFlow.setDraft({
-      guests: this.form.controls.guests.value,
-      date: this.form.controls.date.value,
-      time: this.form.controls.time.value,
-      table: selectedTable
+    // Build ISO datetime: YYYY-MM-DDTHH:mm:00
+    const reservationTime = `${this.selectedDate()}T${this.selectedTime()}:00`;
+
+    const payload = {
+      tableId: this.selectedTable()!.id,
+      customerId: userId ? Number(userId) : 1,
+      numberOfGuests: this.numberOfGuests(),
+      reservationTime,
+      note: this.note || undefined
+    };
+
+    this.isSubmitting.set(true);
+    this.submitError.set(null);
+
+    this.reservationService.createReservation(payload).subscribe({
+      next: () => {
+        this.isSubmitting.set(false);
+        this.currentStep.set('success');
+      },
+      error: (err) => {
+        this.isSubmitting.set(false);
+        this.submitError.set(err?.message ?? 'Đặt bàn thất bại. Vui lòng thử lại.');
+      }
     });
+  }
 
-    // Submit reservation and navigate to Profile to track status
-    this.reservationFlow.submitReservation();
-    this.router.navigateByUrl('/customer/profile');
+  // ── Reset ──
+
+  resetFlow(): void {
+    this.selectedTableId.set(null);
+    this.selectedTable.set(null);
+    this.selectedDate.set('');
+    this.selectedTime.set('');
+    this.numberOfGuests.set(2);
+    this.note = '';
+    this.submitError.set(null);
+    this.currentStep.set('table');
   }
 }

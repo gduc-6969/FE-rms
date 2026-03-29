@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 const TOKEN_KEY = 'rms-token';
 const ROLE_KEY = 'rms-role';
 const USER_KEY = 'rms-user';
+const USER_ID_KEY = 'rms-user-id';
 
 @Injectable({
   providedIn: 'root'
@@ -32,6 +33,7 @@ export class AuthService {
           localStorage.setItem(TOKEN_KEY, response.data.accessToken);
           localStorage.setItem(ROLE_KEY, mappedRole);
           localStorage.setItem(USER_KEY, response.data.user.fullName);
+          localStorage.setItem(USER_ID_KEY, String(response.data.user.id));
 
           this.role.set(mappedRole);
           this.fullName.set(response.data.user.fullName);
@@ -50,6 +52,7 @@ export class AuthService {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ROLE_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(USER_ID_KEY);
     this.role.set(null);
     this.fullName.set(null);
   }
