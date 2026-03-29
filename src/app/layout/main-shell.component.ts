@@ -373,7 +373,6 @@ export class MainShellComponent {
       { label: 'Home', icon: 'home', path: '/customer/home' },
       { label: 'Menu', icon: 'menu_book', path: '/customer/menu' },
       { label: 'Reservation', icon: 'event_seat', path: '/customer/reservation' },
-      { label: 'My Table', icon: 'table_restaurant', path: '/customer/my-table' },
       { label: 'Profile', icon: 'person', path: '/customer/profile' }
     ]
   };

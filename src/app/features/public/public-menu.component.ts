@@ -950,7 +950,7 @@ export class PublicMenuComponent implements OnInit {
 
   goToAccount(): void {
     this.userMenuOpen.set(false);
-    this.router.navigate(['/customer/home'], { replaceUrl: true });
+    this.router.navigate(['/customer/profile'], { replaceUrl: true });
   }
 
   onSignOut(): void {

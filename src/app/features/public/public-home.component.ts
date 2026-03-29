@@ -151,10 +151,7 @@ import { AuthService } from '../../core/services/auth.service';
               </p>
             </div>
             <div class="about-image">
-              <div class="about-image-placeholder">
-                <mat-icon>restaurant_menu</mat-icon>
-                <span>Our Kitchen</span>
-              </div>
+              <img src="assets/food.jpg" alt="A Culinary Journey" class="about-img" />
             </div>
           </div>
           <div class="about-stats">
@@ -182,7 +179,8 @@ import { AuthService } from '../../core/services/auth.service';
         <div class="gallery-grid">
           @for (photo of galleryPhotos; track photo.label) {
             <div class="gallery-item" [class]="photo.size">
-              <div class="gallery-placeholder">
+              <img [src]="photo.image" [alt]="photo.label" />
+              <div class="gallery-overlay">
                 <mat-icon>{{ photo.icon }}</mat-icon>
                 <span>{{ photo.label }}</span>
               </div>
@@ -210,17 +208,6 @@ import { AuthService } from '../../core/services/auth.service';
               <span class="footer-name">Desinare</span>
             </div>
             <p class="footer-desc">Fine dining in the heart of the city. Crafted with passion since 2014.</p>
-          </div>
-          <div class="footer-col">
-            <h4>Quick Links</h4>
-            <a routerLink="/" [replaceUrl]="true">Home</a>
-            <a routerLink="/menu" [replaceUrl]="true">Menu</a>
-            <a (click)="onBookTable()">Reservations</a>
-            @if (authService.isAuthenticated()) {
-              <a (click)="goToAccount()">Account</a>
-            } @else {
-              <a routerLink="/login">Sign In</a>
-            }
           </div>
           <div class="footer-col">
             <h4>Contact Us</h4>
@@ -890,29 +877,12 @@ import { AuthService } from '../../core/services/auth.service';
 
     .about-text p:last-child { margin-bottom: 0; }
 
-    .about-image-placeholder {
+    .about-img {
       width: 100%;
       height: 320px;
-      background: linear-gradient(135deg, #1A1A1A 0%, #242424 100%);
-      border: 1px solid #2C2C2C;
+      object-fit: cover;
       border-radius: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      color: #555;
-    }
-
-    .about-image-placeholder mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-    }
-
-    .about-image-placeholder span {
-      font-size: 14px;
-      font-weight: 500;
+      display: block;
     }
 
     .about-stats {
@@ -989,8 +959,8 @@ import { AuthService } from '../../core/services/auth.service';
 
     .gallery-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-auto-rows: 180px;
+      grid-template-columns: repeat(2, 1fr);
+      grid-auto-rows: 260px;
       gap: 16px;
     }
 
@@ -999,44 +969,46 @@ import { AuthService } from '../../core/services/auth.service';
       overflow: hidden;
       cursor: pointer;
       transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .gallery-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 20px;
+      gap: 4px;
+      color: #fff;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    .gallery-overlay mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+
+    .gallery-overlay span {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
     }
 
     .gallery-item:hover {
       transform: scale(1.02);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    }
-
-    .gallery-item.wide {
-      grid-column: span 2;
-    }
-
-    .gallery-item.tall {
-      grid-row: span 2;
-    }
-
-    .gallery-placeholder {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #1A1A1A 0%, #242424 100%);
-      border: 1px solid #2C2C2C;
-      border-radius: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      color: #555;
-    }
-
-    .gallery-placeholder mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-    }
-
-    .gallery-placeholder span {
-      font-size: 12px;
-      font-weight: 500;
     }
 
     /* ===== CTA Banner ===== */
@@ -1068,7 +1040,7 @@ import { AuthService } from '../../core/services/auth.service';
 
     .footer-columns {
       display: grid;
-      grid-template-columns: 2fr 1fr 1.5fr;
+      grid-template-columns: 1fr 1fr;
       gap: 40px;
       max-width: 960px;
       margin: 0 auto 40px;
@@ -1193,10 +1165,8 @@ import { AuthService } from '../../core/services/auth.service';
       .gallery { padding: 48px 20px; }
       .gallery-grid {
         grid-template-columns: 1fr 1fr;
-        grid-auto-rows: 140px;
+        grid-auto-rows: 180px;
       }
-      .gallery-item.wide { grid-column: span 2; }
-      .gallery-item.tall { grid-row: span 1; }
 
       .reviews { padding: 0 20px 48px; }
       .reviews-grid { grid-template-columns: 1fr; }
@@ -1205,7 +1175,7 @@ import { AuthService } from '../../core/services/auth.service';
       .top-nav { padding: 14px 20px; }
       .cta-banner { padding: 48px 20px; }
 
-      .footer-columns { grid-template-columns: 1fr; gap: 32px; }
+      .footer-columns { grid-template-columns: 1fr; gap: 24px; }
       .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
     }
 
@@ -1238,12 +1208,10 @@ export class PublicHomeComponent {
   readonly mobileMenuOpen = signal(false);
 
   readonly galleryPhotos = [
-    { label: 'Dining Hall', icon: 'chair', size: 'wide' },
-    { label: 'Private Room', icon: 'meeting_room', size: '' },
-    { label: 'Bar Area', icon: 'local_bar', size: '' },
-    { label: 'Garden Terrace', icon: 'yard', size: 'tall' },
-    { label: 'Kitchen', icon: 'soup_kitchen', size: '' },
-    { label: 'Wine Cellar', icon: 'wine_bar', size: 'wide' }
+    { label: 'Dining Hall', icon: 'chair', size: '', image: 'assets/dininghall.jpg' },
+    { label: 'Bar Area', icon: 'local_bar', size: '', image: 'assets/bar.jpg' },
+    { label: 'Kitchen', icon: 'soup_kitchen', size: '', image: 'assets/kitchen.jpg' },
+    { label: 'Wine Cellar', icon: 'wine_bar', size: '', image: 'assets/winecellar.jpg' }
   ];
 
   readonly authService = inject(AuthService);
@@ -1261,7 +1229,7 @@ export class PublicHomeComponent {
 
   goToAccount(): void {
     this.userMenuOpen.set(false);
-    this.router.navigate(['/customer/home'], { replaceUrl: true });
+    this.router.navigate(['/customer/profile'], { replaceUrl: true });
   }
 
   onSignOut(): void {
