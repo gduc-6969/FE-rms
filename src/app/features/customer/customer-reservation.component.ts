@@ -777,12 +777,24 @@ export class CustomerReservationComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Guard: chỉ cho phép truy cập nếu đã đăng nhập
+    const token = localStorage.getItem('rms-token');
+    if (!token) {
+      this.router.navigateByUrl('/login');
+      return;
+    }
+
     this.reservationService.getAvailableTables().subscribe({
       next: tables => {
         this.allTables.set(tables);
         this.isLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
+        // Token hết hạn hoặc không hợp lệ → redirect về login
+        if (err?.status === 401 || err?.status === 403) {
+          localStorage.removeItem('rms-token');
+          this.router.navigateByUrl('/login');
+        }
         this.isLoading.set(false);
       }
     });
