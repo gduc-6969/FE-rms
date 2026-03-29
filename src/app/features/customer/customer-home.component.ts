@@ -1,19 +1,16 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { CustomerReservationFlowService } from '../../core/services/customer-reservation-flow.service';
-
-const HOME_SESSIONS = [
-  { id: 'lunch' as const,  label: 'Lunch Session',  start: 10, end: 14, cutoffHour: 9,  cutoffMin: 30 },
-  { id: 'dinner' as const, label: 'Dinner Session', start: 17, end: 22, cutoffHour: 16, cutoffMin: 0  }
-];
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { MenuService } from '../../core/services/menu.service';
+import { MenuItemResponse } from '../../core/models/app.models';
 
 @Component({
   selector: 'app-customer-home',
   standalone: true,
-  imports: [MatButtonModule, MatCardModule, MatIconModule, RouterLink],
+  imports: [MatButtonModule, MatCardModule, MatIconModule, RouterLink, CurrencyPipe, DecimalPipe],
   template: `
     <section class="customer-home">
       <!-- Hero Section with Combined Headline -->
@@ -98,7 +95,7 @@ const HOME_SESSIONS = [
         <div class="menu-card-overlay">
           <div class="menu-card-content">
             <h3>Explore Our Menu</h3>
-            <p>Discover seasonal specialties & signature dishes</p>
+            <p>Discover seasonal specialties &amp; signature dishes</p>
             <span class="menu-link">
               View Full Menu
               <mat-icon>arrow_forward</mat-icon>
@@ -113,15 +110,29 @@ const HOME_SESSIONS = [
         <span class="section-link" routerLink="/customer/menu">Discover More</span>
       </div>
       <section class="specialties-grid">
-        @for (item of seasonalItems; track item.name) {
-          <mat-card class="specialty-card">
-            <div class="specialty-image"></div>
-            <mat-card-content>
-              <p class="specialty-name">{{ item.name }}</p>
-              <small class="specialty-desc">{{ item.description }}</small>
-              <span class="specialty-price">{{ item.price }}</span>
-            </mat-card-content>
-          </mat-card>
+        @if (isLoading()) {
+          @for (i of [1,2,3]; track i) {
+            <div class="skeleton-card">
+              <div class="skeleton-img"></div>
+              <div class="skeleton-body">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+              </div>
+            </div>
+          }
+        } @else {
+          @for (item of seasonalItems(); track item.id) {
+            <mat-card class="specialty-card">
+              <div class="specialty-image"
+                [style.backgroundImage]="item.imageUrl ? 'url(' + item.imageUrl + ')' : ''">
+              </div>
+              <mat-card-content>
+                <p class="specialty-name">{{ item.name }}</p>
+                <small class="specialty-desc">{{ item.categoryName }}</small>
+                <span class="specialty-price">{{ item.price | number }}đ</span>
+              </mat-card-content>
+            </mat-card>
+          }
         }
       </section>
 
@@ -137,18 +148,32 @@ const HOME_SESSIONS = [
         <span class="section-link" routerLink="/customer/menu">Meet Our Selection</span>
       </div>
       <section class="recommend-grid">
-        @for (dish of dishes; track dish.name) {
-          <mat-card class="recommend-card">
-            <div class="dish-image"></div>
-            <div class="chef-pick-badge">
-              <mat-icon>star</mat-icon>
+        @if (isLoading()) {
+          @for (i of [1,2,3]; track i) {
+            <div class="skeleton-card">
+              <div class="skeleton-img tall"></div>
+              <div class="skeleton-body">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+              </div>
             </div>
-            <mat-card-content>
-              <p class="dish-name">{{ dish.name }}</p>
-              <small class="dish-desc">{{ dish.description }}</small>
-              <span class="dish-price">{{ dish.price }}</span>
-            </mat-card-content>
-          </mat-card>
+          }
+        } @else {
+          @for (dish of chefDishes(); track dish.id) {
+            <mat-card class="recommend-card">
+              <div class="dish-image"
+                [style.backgroundImage]="dish.imageUrl ? 'url(' + dish.imageUrl + ')' : ''">
+              </div>
+              <div class="chef-pick-badge">
+                <mat-icon>star</mat-icon>
+              </div>
+              <mat-card-content>
+                <p class="dish-name">{{ dish.name }}</p>
+                <small class="dish-desc">{{ dish.categoryName }}</small>
+                <span class="dish-price">{{ dish.price | number }}đ</span>
+              </mat-card-content>
+            </mat-card>
+          }
         }
       </section>
     </section>
@@ -581,6 +606,8 @@ const HOME_SESSIONS = [
       .specialty-image {
         height: 80px;
         background: linear-gradient(120deg, #242424 0%, #1A1A1A 100%);
+        background-size: cover;
+        background-position: center;
       }
 
       .specialty-card mat-card-content {
@@ -592,6 +619,9 @@ const HOME_SESSIONS = [
         font-size: 14px;
         font-weight: 600;
         color: #F0F0F0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .specialty-desc {
@@ -600,6 +630,9 @@ const HOME_SESSIONS = [
         font-size: 12px;
         color: #A0A0A0;
         line-height: 1.4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .specialty-price {
@@ -634,6 +667,8 @@ const HOME_SESSIONS = [
       .dish-image {
         height: 96px;
         background: linear-gradient(120deg, #242424 0%, #1A1A1A 100%);
+        background-size: cover;
+        background-position: center;
       }
 
       .chef-pick-badge {
@@ -665,6 +700,9 @@ const HOME_SESSIONS = [
         font-size: 14px;
         font-weight: 600;
         color: #F0F0F0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .dish-desc {
@@ -673,12 +711,58 @@ const HOME_SESSIONS = [
         font-size: 12px;
         color: #A0A0A0;
         line-height: 1.4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .dish-price {
         color: #C5A028;
         font-weight: 600;
         font-size: 14px;
+      }
+
+      /* Skeleton Loading */
+      .skeleton-card {
+        border-radius: 16px;
+        background: #1A1A1A;
+        border: 1px solid #2C2C2C;
+        overflow: hidden;
+      }
+
+      .skeleton-img {
+        height: 80px;
+        background: linear-gradient(90deg, #242424 25%, #2C2C2C 50%, #242424 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
+
+      .skeleton-img.tall {
+        height: 96px;
+      }
+
+      .skeleton-body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .skeleton-line {
+        height: 12px;
+        border-radius: 6px;
+        background: linear-gradient(90deg, #242424 25%, #2C2C2C 50%, #242424 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
+
+      .skeleton-line.short {
+        width: 60%;
+      }
+
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
       }
 
       /* Mobile Responsive */
@@ -727,97 +811,26 @@ const HOME_SESSIONS = [
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CustomerHomeComponent implements OnDestroy {
-  private readonly reservationFlow = inject(CustomerReservationFlowService);
-  private readonly nowMin = signal(this.currentMinOfDay());
-  private readonly clockHandle: ReturnType<typeof setInterval>;
+export class CustomerHomeComponent implements OnInit {
+  isLoading = signal(true);
+  seasonalItems = signal<MenuItemResponse[]>([]);
+  chefDishes = signal<MenuItemResponse[]>([]);
 
-  constructor() {
-    this.clockHandle = setInterval(() => this.nowMin.set(this.currentMinOfDay()), 60_000);
-  }
+  constructor(private readonly menuService: MenuService) {}
 
-  ngOnDestroy(): void {
-    clearInterval(this.clockHandle);
-  }
-
-  private currentMinOfDay(): number {
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes();
-  }
-
-  readonly todayLabel = computed(() => {
-    this.nowMin(); // reactive dependency for midnight rollover
-    const now = new Date();
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
-  });
-
-  readonly currentTimeLabel = computed(() => {
-    const totalMin = this.nowMin();
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    const period = h >= 12 ? 'PM' : 'AM';
-    const dh = h > 12 ? h - 12 : h === 0 ? 12 : h;
-    return `${dh}:${m.toString().padStart(2, '0')} ${period}`;
-  });
-
-  private readonly activeSession = computed(() => {
-    const min = this.nowMin();
-    return HOME_SESSIONS.find(s => min >= s.start * 60 && min < s.end * 60) ?? null;
-  });
-
-  readonly sessionActive = computed(() => !!this.activeSession());
-
-  readonly sessionLabel = computed(() => {
-    const s = this.activeSession();
-    if (s) return s.label;
-    const min = this.nowMin();
-    if (min < HOME_SESSIONS[0].start * 60) return 'Opening Soon';
-    if (min < HOME_SESSIONS[1].start * 60) return 'Afternoon Break';
-    return 'Closed for Tonight';
-  });
-
-  readonly bookingOpen = computed(() => {
-    const min = this.nowMin();
-    return HOME_SESSIONS.some(s => min < s.cutoffHour * 60 + s.cutoffMin && min < s.end * 60);
-  });
-
-  readonly sessionNote = computed(() => {
-    const min = this.nowMin();
-    const s = this.activeSession();
-    if (s) {
-      const cutoff = s.cutoffHour * 60 + s.cutoffMin;
-      if (min < cutoff) {
-        const p = s.cutoffHour >= 12 ? 'PM' : 'AM';
-        const dh = s.cutoffHour > 12 ? s.cutoffHour - 12 : s.cutoffHour;
-        return `Accepting reservations until ${dh}:${s.cutoffMin.toString().padStart(2, '0')} ${p}`;
+  ngOnInit(): void {
+    this.menuService.getAvailableMenuItems().subscribe({
+      next: items => {
+        // Lấy 3 món đầu cho Seasonal Specialties
+        this.seasonalItems.set(items.slice(0, 3));
+        // Lấy 3 món tiếp theo cho Chef's Recommendations
+        this.chefDishes.set(items.slice(3, 6));
+        this.isLoading.set(false);
+      },
+      error: err => {
+        console.error('Failed to load menu items for home page', err);
+        this.isLoading.set(false);
       }
-      return `${s.label} in progress · Walk-ins welcome`;
-    }
-    const dinner = HOME_SESSIONS[1];
-    if (min >= HOME_SESSIONS[0].end * 60 && min < dinner.start * 60) {
-      return min < dinner.cutoffHour * 60 + dinner.cutoffMin
-        ? 'Dinner starts at 5:00 PM · Reservations open'
-        : 'Dinner starts at 5:00 PM · Booking closed';
-    }
-    if (min < HOME_SESSIONS[0].start * 60) return 'Lunch begins at 10:00 AM';
-    return 'Restaurant is closed · See you tomorrow';
-  });
-
-  readonly bookableTables = computed(() =>
-    this.reservationFlow.tableLayout().filter(t => t.status === 'available').length
-  );
-
-  readonly seasonalItems = [
-    { name: 'Spring Risotto', description: 'Fresh herbs & parmesan', price: '$32' },
-    { name: 'Citrus Ceviche', description: 'Lime-cured sea bass', price: '$24' },
-    { name: 'Garden Salad', description: 'Seasonal greens', price: '$18' }
-  ];
-
-  readonly dishes = [
-    { name: 'Truffle Pasta', description: 'Black truffle & cream', price: '$42' },
-    { name: 'Grilled Salmon', description: 'Herb-crusted filet', price: '$38' },
-    { name: 'Chocolate Lava', description: 'Molten center', price: '$16' }
-  ];
+    });
+  }
 }

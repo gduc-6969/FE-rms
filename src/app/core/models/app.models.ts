@@ -155,3 +155,31 @@ export interface MenuItemResponse {
   status: string;
   createdAt?: string;
 }
+
+export interface TableResponse {
+  id: number;
+  tableCode: string;
+  capacity: number;
+  status: 'trong' | 'da_dat' | 'dang_phuc_vu' | 'bao_tri';
+}
+
+export interface CreateReservationRequest {
+  tableId: number;
+  customerId: number;
+  numberOfGuests: number;
+  reservationTime: string; // ISO datetime
+  note?: string;
+}
+
+export interface ReservationResponse {
+  id: number;
+  tableId: number;
+  tableCode: string;
+  customerId: number;
+  customerName: string;
+  numberOfGuests: number;
+  reservationTime: string;
+  note?: string;
+  status: string;
+  createdAt: string;
+}
