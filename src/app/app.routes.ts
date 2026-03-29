@@ -9,7 +9,6 @@ import { StaffManagementComponent } from './features/admin/staff-management.comp
 import { TableManagementComponent } from './features/admin/table-management.component';
 import { CustomerHomeComponent } from './features/customer/customer-home.component';
 import { CustomerMenuComponent } from './features/customer/customer-menu.component';
-import { CustomerMyTableComponent } from './features/customer/customer-my-table.component';
 import { CustomerProfileComponent } from './features/customer/customer-profile.component';
 import { CustomerReservationComponent } from './features/customer/customer-reservation.component';
 import { CustomerSecureReservationComponent } from './features/customer/customer-secure-reservation.component';
@@ -67,7 +66,6 @@ export const routes: Routes = [
 			{ path: 'menu', component: CustomerMenuComponent },
 			{ path: 'reservation', component: CustomerReservationComponent },
 			{ path: 'reservation/secure', component: CustomerSecureReservationComponent },
-			{ path: 'my-table', component: CustomerMyTableComponent },
 			{ path: 'profile', component: CustomerProfileComponent }
 		]
 	},

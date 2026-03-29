@@ -124,45 +124,104 @@ const SERVICE_SESSIONS = {
             <div class="legend-row">
               <span class="legend-item available"><span class="legend-dot"></span>Trống</span>
               <span class="legend-item booked"><span class="legend-dot"></span>Đã đặt</span>
+              <span class="legend-item selected-legend"><span class="legend-dot"></span>Đã chọn</span>
             </div>
 
             <!-- Loading skeleton -->
             @if (isLoading()) {
-              <div class="floor-plan">
-                @for (i of [1,2,3,4,5,6]; track i) {
-                  <div class="skeleton-table"></div>
+              <div class="floor-plan-skeleton">
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="skeleton-zone"></div>
                 }
               </div>
             }
 
-            <!-- Table grid -->
+            <!-- Floor Plan Layout -->
             @if (!isLoading()) {
-              <div class="floor-plan">
-                @for (table of filteredTables(); track table.id) {
-                  <button
-                    type="button"
-                    class="table-card"
-                    [class.available]="table.status === 'trong'"
-                    [class.booked]="table.status === 'da_dat'"
-                    [class.selected]="selectedTableId() === table.id"
-                    [disabled]="table.status !== 'trong'"
-                    (click)="selectTable(table)">
-                    <div class="table-icon">
-                      <mat-icon>table_restaurant</mat-icon>
+              <div class="floor-plan-wrapper">
+                <!-- Top row: Restrooms + Bar Area + Kitchen -->
+                <div class="fp-top-row">
+                  <div class="fp-landmark restrooms">
+                    <mat-icon>wc</mat-icon>
+                    <span>Restrooms</span>
+                  </div>
+                  <div class="fp-zone bar-zone">
+                    <div class="zone-label"><mat-icon>local_bar</mat-icon> Bar Area</div>
+                    <div class="zone-tables">
+                      @for (table of zones().bar; track table.id) {
+                        <button type="button" class="fp-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                          <mat-icon>deck</mat-icon>
+                          <span class="fp-table-code">{{ table.tableCode }}</span>
+                          <span class="fp-table-cap">{{ table.capacity }}p</span>
+                          @if (selectedTableId() === table.id) { <mat-icon class="fp-check">check_circle</mat-icon> }
+                        </button>
+                      }
+                      @if (zones().bar.length === 0) { <span class="zone-empty">—</span> }
                     </div>
-                    <strong class="table-name">{{ table.tableCode }}</strong>
-                    <div class="table-capacity">
-                      <mat-icon>people</mat-icon>
-                      <span>{{ table.capacity }} người</span>
+                  </div>
+                  <div class="fp-landmark kitchen">
+                    <mat-icon>soup_kitchen</mat-icon>
+                    <span>Kitchen</span>
+                  </div>
+                </div>
+
+                <!-- Middle row: Booth Alcoves + Main floor -->
+                <div class="fp-middle-row">
+                  <div class="fp-zone booth-zone">
+                    <div class="zone-label"><mat-icon>weekend</mat-icon> Booth Alcoves</div>
+                    <div class="zone-tables">
+                      @for (table of zones().booth; track table.id) {
+                        <button type="button" class="fp-table booth-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                          <mat-icon>weekend</mat-icon>
+                          <span class="fp-table-code">{{ table.tableCode }}</span>
+                          <span class="fp-table-cap">{{ table.capacity }}p</span>
+                          @if (selectedTableId() === table.id) { <mat-icon class="fp-check">check_circle</mat-icon> }
+                        </button>
+                      }
+                      @if (zones().booth.length === 0) { <span class="zone-empty">—</span> }
                     </div>
-                    <span class="table-status">
-                      {{ table.status === 'trong' ? 'Trống' : 'Đã đặt' }}
-                    </span>
-                    @if (selectedTableId() === table.id) {
-                      <mat-icon class="check-icon">check_circle</mat-icon>
-                    }
-                  </button>
-                }
+                  </div>
+
+                  <div class="fp-main-floor">
+                    <!-- Communal Tables -->
+                    <div class="fp-zone communal-zone">
+                      <div class="zone-label"><mat-icon>table_bar</mat-icon> Communal Tables</div>
+                      <div class="zone-tables">
+                        @for (table of zones().communal; track table.id) {
+                          <button type="button" class="fp-table communal-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                            <mat-icon>table_bar</mat-icon>
+                            <span class="fp-table-code">{{ table.tableCode }}</span>
+                            <span class="fp-table-cap">{{ table.capacity }}p</span>
+                            @if (selectedTableId() === table.id) { <mat-icon class="fp-check">check_circle</mat-icon> }
+                          </button>
+                        }
+                        @if (zones().communal.length === 0) { <span class="zone-empty">—</span> }
+                      </div>
+                    </div>
+
+                    <!-- Main Dining -->
+                    <div class="fp-zone dining-zone">
+                      <div class="zone-label"><mat-icon>restaurant</mat-icon> Main Dining</div>
+                      <div class="zone-tables">
+                        @for (table of zones().dining; track table.id) {
+                          <button type="button" class="fp-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                            <mat-icon>table_restaurant</mat-icon>
+                            <span class="fp-table-code">{{ table.tableCode }}</span>
+                            <span class="fp-table-cap">{{ table.capacity }}p</span>
+                            @if (selectedTableId() === table.id) { <mat-icon class="fp-check">check_circle</mat-icon> }
+                          </button>
+                        }
+                        @if (zones().dining.length === 0) { <span class="zone-empty">—</span> }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bottom: Entrance -->
+                <div class="fp-entrance">
+                  <mat-icon>door_front</mat-icon>
+                  <span>Entrance</span>
+                </div>
               </div>
 
               @if (filteredTables().length === 0) {
@@ -486,48 +545,143 @@ const SERVICE_SESSIONS = {
     .legend-item.available .legend-dot { background: #2BAE66; }
     .legend-item.booked .legend-dot { background: #E06C6C; }
 
-    /* Floor Plan */
-    .floor-plan {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 12px;
+    .legend-item.selected-legend .legend-dot { background: #C5A028; }
+
+    /* Floor Plan Layout */
+    .floor-plan-wrapper {
+      background: #181818;
+      border: 1px solid #2C2C2C;
+      border-radius: 16px;
+      padding: 16px;
       margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .table-card {
+    .fp-top-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .fp-middle-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 12px;
+      min-height: 260px;
+    }
+
+    .fp-main-floor {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Landmarks */
+    .fp-landmark {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px 14px;
+      background: #1E1E1E;
+      border: 1px dashed #3A3A3A;
+      border-radius: 10px;
+      color: #5A5A5A;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 70px;
+    }
+    .fp-landmark mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+    .fp-entrance {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px;
+      color: #5A5A5A;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-top: 2px dashed #3A3A3A;
+    }
+    .fp-entrance mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    /* Zone */
+    .fp-zone {
+      background: #1A1A1A;
+      border: 1px solid #2C2C2C;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .zone-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #8A8A8A;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #2C2C2C;
+    }
+    .zone-label mat-icon { font-size: 16px; width: 16px; height: 16px; color: #C5A028; }
+
+    .zone-tables {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .zone-empty {
+      color: #3A3A3A;
+      font-size: 12px;
+      padding: 8px;
+    }
+
+    /* Table button */
+    .fp-table {
       position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      padding: 16px 12px;
-      min-height: 130px;
+      gap: 3px;
+      padding: 10px 12px;
+      min-width: 72px;
       background: #242424;
       border: 2px solid #2C2C2C;
-      border-radius: 16px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s ease;
+      color: #A0A0A0;
     }
+    .fp-table mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .fp-table-code { font-size: 11px; font-weight: 700; color: #F0F0F0; }
+    .fp-table-cap { font-size: 10px; color: #777; }
 
-    .table-card.available { border-color: #2BAE66; }
-    .table-card.available:hover { background: #2C2C2C; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(43,174,102,0.2); }
-    .table-card.booked { opacity: 0.45; cursor: not-allowed; border-color: #E06C6C; }
-    .table-card.selected { background: #C5A028; border-color: #C5A028; }
-    .table-card.selected .table-icon,
-    .table-card.selected .table-name,
-    .table-card.selected .table-capacity,
-    .table-card.selected .table-status { color: #0F0F0F; }
+    .fp-table.available { border-color: #2BAE66; }
+    .fp-table.available:hover { background: #2C2C2C; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(43,174,102,0.2); }
+    .fp-table.booked { opacity: 0.4; cursor: not-allowed; border-color: #E06C6C; }
+    .fp-table.selected { background: #C5A028; border-color: #C5A028; color: #0F0F0F; }
+    .fp-table.selected .fp-table-code { color: #0F0F0F; }
+    .fp-table.selected .fp-table-cap { color: #0F0F0F; }
 
-    .table-icon { color: #A0A0A0; }
-    .table-icon mat-icon { font-size: 32px; width: 32px; height: 32px; }
-    .table-name { font-size: 15px; font-weight: 600; color: #F0F0F0; }
-    .table-capacity { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #A0A0A0; }
-    .table-capacity mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .table-status { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-    .table-card.available .table-status { color: #2BAE66; }
-    .table-card.booked .table-status { color: #E06C6C; }
+    .fp-check { position: absolute; top: -4px; right: -4px; font-size: 14px; width: 14px; height: 14px; color: #0F0F0F; background: #C5A028; border-radius: 50%; }
 
-    .check-icon { position: absolute; top: 6px; right: 6px; color: #0F0F0F; font-size: 18px; width: 18px; height: 18px; }
+    .communal-table { min-width: 90px; }
+    .booth-table { min-width: 80px; }
 
     /* Section label */
     .section-label { display: block; font-size: 13px; color: #A0A0A0; margin-bottom: 8px; font-weight: 500; }
@@ -685,8 +839,14 @@ const SERVICE_SESSIONS = {
     .success-note { color: #A0A0A0; font-size: 14px; margin-bottom: 20px; }
 
     /* Skeleton */
-    .skeleton-table {
-      height: 130px; border-radius: 16px;
+    .floor-plan-skeleton {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .skeleton-zone {
+      height: 140px; border-radius: 12px;
       background: linear-gradient(90deg, #242424 25%, #2C2C2C 50%, #242424 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
@@ -705,7 +865,9 @@ const SERVICE_SESSIONS = {
 
     @media (max-width: 640px) {
       .reservation-flow { padding: 16px; padding-bottom: 120px; }
-      .floor-plan { grid-template-columns: repeat(2, 1fr); }
+      .fp-top-row { grid-template-columns: 1fr; }
+      .fp-top-row .fp-landmark { display: none; }
+      .fp-middle-row { grid-template-columns: 1fr; }
       .shift-tabs { flex-direction: column; }
     }
   `],
@@ -744,6 +906,16 @@ export class CustomerReservationComponent implements OnInit {
   readonly filteredTables = computed(() => {
     const min = this.minCapacity();
     return this.allTables().filter(t => t.capacity >= min);
+  });
+
+  readonly zones = computed(() => {
+    const tables = this.filteredTables();
+    return {
+      bar: tables.filter(t => t.capacity <= 2),
+      dining: tables.filter(t => t.capacity >= 3 && t.capacity <= 4),
+      booth: tables.filter(t => t.capacity >= 5 && t.capacity <= 6),
+      communal: tables.filter(t => t.capacity >= 7)
+    };
   });
 
   readonly currentShiftSlots = computed((): TimeSlot[] =>

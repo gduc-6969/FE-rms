@@ -7,6 +7,7 @@ import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { MenuService } from '../../core/services/menu.service';
 import { MenuItemResponse } from '../../core/models/app.models';
 import { CustomerReservationFlowService } from '../../core/services/customer-reservation-flow.service';
+import { ReservationService } from '../../core/services/reservation.service';
 
 const HOME_SESSIONS = [
   { id: 'lunch' as const,  label: 'Lunch Session',  start: 10, end: 14, cutoffHour: 9,  cutoffMin: 30 },
@@ -825,6 +826,7 @@ export class CustomerHomeComponent implements OnInit, OnDestroy {
 
   // ── Session / clock ──
   private readonly reservationFlow = inject(CustomerReservationFlowService);
+  private readonly reservationService = inject(ReservationService);
   private readonly nowMin = signal(this.currentMinOfDay());
   private readonly clockHandle: ReturnType<typeof setInterval>;
 
@@ -843,6 +845,11 @@ export class CustomerHomeComponent implements OnInit, OnDestroy {
         console.error('Failed to load menu items for home page', err);
         this.isLoading.set(false);
       }
+    });
+
+    this.reservationService.getAvailableTables().subscribe({
+      next: tables => this.bookableTables.set(tables.filter(t => t.status === 'trong').length),
+      error: () => this.bookableTables.set(0)
     });
   }
 
@@ -915,7 +922,5 @@ export class CustomerHomeComponent implements OnInit, OnDestroy {
     return 'Restaurant is closed · See you tomorrow';
   });
 
-  readonly bookableTables = computed(() =>
-    this.reservationFlow.tableLayout().filter(t => t.status === 'available').length
-  );
+  readonly bookableTables = signal(0);
 }
