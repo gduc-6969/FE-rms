@@ -55,8 +55,8 @@ const EVENING_SLOTS = buildShiftSlots(17, 22, 'evening');
 const ALL_SLOTS: TimeSlot[] = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
 const SERVICE_SESSIONS = {
-  morning: { cutoffHour: 9,  cutoffMin: 30, endHour: 14 },
-  evening: { cutoffHour: 16, cutoffMin: 0,  endHour: 22 }
+  morning: { cutoffHour: 9, cutoffMin: 30, endHour: 14 },
+  evening: { cutoffHour: 16, cutoffMin: 0, endHour: 22 }
 };
 
 @Component({
@@ -122,9 +122,9 @@ const SERVICE_SESSIONS = {
 
             <!-- Status legend -->
             <div class="legend-row">
-              <span class="legend-item available"><span class="legend-dot"></span>Trống</span>
-              <span class="legend-item booked"><span class="legend-dot"></span>Đã đặt</span>
-              <span class="legend-item selected-legend"><span class="legend-dot"></span>Đã chọn</span>
+              <span class="legend-item available"><span class="legend-dot"></span>Available</span>
+              <span class="legend-item booked"><span class="legend-dot"></span>Booked</span>
+              <span class="legend-item selected-legend"><span class="legend-dot"></span>Selected</span>
             </div>
 
             <!-- Loading skeleton -->
@@ -149,7 +149,13 @@ const SERVICE_SESSIONS = {
                     <div class="zone-label"><mat-icon>local_bar</mat-icon> Bar Area</div>
                     <div class="zone-tables">
                       @for (table of zones().bar; track table.id) {
-                        <button type="button" class="fp-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                        <button type="button" class="fp-table"
+                          [class.available]="table.status === 'trong'"
+                          [class.booked]="table.status === 'da_dat'"
+                          [class.serving]="table.status === 'dang_phuc_vu'"
+                          [class.selected]="selectedTableId() === table.id"
+                          [disabled]="table.status !== 'trong'"
+                          (click)="selectTable(table)">
                           <mat-icon>deck</mat-icon>
                           <span class="fp-table-code">{{ table.tableCode }}</span>
                           <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -171,7 +177,13 @@ const SERVICE_SESSIONS = {
                     <div class="zone-label"><mat-icon>weekend</mat-icon> Booth Alcoves</div>
                     <div class="zone-tables">
                       @for (table of zones().booth; track table.id) {
-                        <button type="button" class="fp-table booth-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                        <button type="button" class="fp-table booth-table"
+                          [class.available]="table.status === 'trong'"
+                          [class.booked]="table.status === 'da_dat'"
+                          [class.serving]="table.status === 'dang_phuc_vu'"
+                          [class.selected]="selectedTableId() === table.id"
+                          [disabled]="table.status !== 'trong'"
+                          (click)="selectTable(table)">
                           <mat-icon>weekend</mat-icon>
                           <span class="fp-table-code">{{ table.tableCode }}</span>
                           <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -188,7 +200,13 @@ const SERVICE_SESSIONS = {
                       <div class="zone-label"><mat-icon>table_bar</mat-icon> Communal Tables</div>
                       <div class="zone-tables">
                         @for (table of zones().communal; track table.id) {
-                          <button type="button" class="fp-table communal-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                          <button type="button" class="fp-table communal-table"
+                            [class.available]="table.status === 'trong'"
+                            [class.booked]="table.status === 'da_dat'"
+                            [class.serving]="table.status === 'dang_phuc_vu'"
+                            [class.selected]="selectedTableId() === table.id"
+                            [disabled]="table.status !== 'trong'"
+                            (click)="selectTable(table)">
                             <mat-icon>table_bar</mat-icon>
                             <span class="fp-table-code">{{ table.tableCode }}</span>
                             <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -204,7 +222,13 @@ const SERVICE_SESSIONS = {
                       <div class="zone-label"><mat-icon>restaurant</mat-icon> Main Dining</div>
                       <div class="zone-tables">
                         @for (table of zones().dining; track table.id) {
-                          <button type="button" class="fp-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                          <button type="button" class="fp-table"
+                            [class.available]="table.status === 'trong'"
+                            [class.booked]="table.status === 'da_dat'"
+                            [class.serving]="table.status === 'dang_phuc_vu'"
+                            [class.selected]="selectedTableId() === table.id"
+                            [disabled]="table.status !== 'trong'"
+                            (click)="selectTable(table)">
                             <mat-icon>table_restaurant</mat-icon>
                             <span class="fp-table-code">{{ table.tableCode }}</span>
                             <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -227,7 +251,7 @@ const SERVICE_SESSIONS = {
               @if (filteredTables().length === 0) {
                 <p class="hint">
                   <mat-icon>info</mat-icon>
-                  Không có bàn trống phù hợp với bộ lọc hiện tại.
+                  No available tables match the current filter.
                 </p>
               }
 
@@ -236,7 +260,7 @@ const SERVICE_SESSIONS = {
                 class="next-btn"
                 [disabled]="!selectedTableId()"
                 (click)="goToStep('datetime')">
-                Tiếp tục
+                Continue
                 <mat-icon>arrow_forward</mat-icon>
               </button>
             }
@@ -248,19 +272,19 @@ const SERVICE_SESSIONS = {
       @if (currentStep() === 'datetime') {
         <mat-card class="step-card">
           <mat-card-content>
-            <h3 class="card-title">Chọn ngày và giờ</h3>
+            <h3 class="card-title">Select Date & Time</h3>
 
             <!-- Selected table recap -->
             @if (selectedTable()) {
               <div class="selected-recap">
                 <mat-icon>table_restaurant</mat-icon>
-                <span>{{ selectedTable()!.tableCode }} · {{ selectedTable()!.capacity }} người · tối đa {{ durationLabel() }}</span>
+                <span>{{ selectedTable()!.tableCode }} · {{ selectedTable()!.capacity }} guests · max {{ durationLabel() }}</span>
               </div>
             }
 
             <!-- Date picker -->
             <div class="date-section">
-              <label class="section-label">Chọn ngày</label>
+              <label class="section-label">Select Date</label>
               <div class="date-chips">
                 @for (d of dateOptions; track d.value) {
                   <button
@@ -286,7 +310,7 @@ const SERVICE_SESSIONS = {
                 [class.shift-closed]="shiftStatus().morning.closed"
                 (click)="activeShift.set('morning')">
                 <mat-icon>wb_sunny</mat-icon>
-                Ca Sáng (10:00 – 14:00)
+                Morning Shift (10:00 – 14:00)
                 @if (shiftStatus().morning.closed) {
                   <span class="shift-closed-badge">Closed</span>
                 }
@@ -298,7 +322,7 @@ const SERVICE_SESSIONS = {
                 [class.shift-closed]="shiftStatus().evening.closed"
                 (click)="activeShift.set('evening')">
                 <mat-icon>nights_stay</mat-icon>
-                Ca Tối (17:00 – 22:00)
+                Evening Shift (17:00 – 22:00)
                 @if (shiftStatus().evening.closed) {
                   <span class="shift-closed-badge">Closed</span>
                 }
@@ -322,7 +346,7 @@ const SERVICE_SESSIONS = {
 
             <!-- Number of guests -->
             <div class="guests-row">
-              <label class="section-label">Số khách</label>
+              <label class="section-label">Number of Guests</label>
               <div class="guest-stepper">
                 <button
                   type="button"
@@ -331,7 +355,7 @@ const SERVICE_SESSIONS = {
                   (click)="numberOfGuests.set(numberOfGuests() - 1)">
                   <mat-icon>remove</mat-icon>
                 </button>
-                <span class="guest-count">{{ numberOfGuests() }} người</span>
+                <span class="guest-count">{{ numberOfGuests() }} guests</span>
                 <button
                   type="button"
                   class="stepper-btn"
@@ -344,7 +368,7 @@ const SERVICE_SESSIONS = {
 
             <!-- Note -->
             <mat-form-field class="notes-field" appearance="outline">
-              <mat-label>Ghi chú (tùy chọn)</mat-label>
+              <mat-label>Note (optional)</mat-label>
               <textarea matInput rows="2" [(ngModel)]="note" [ngModelOptions]="{standalone: true}"></textarea>
             </mat-form-field>
 
@@ -354,9 +378,9 @@ const SERVICE_SESSIONS = {
               [disabled]="!selectedDate() || !selectedTime()"
               (click)="confirmReservation()">
               @if (isSubmitting()) {
-                Đang đặt bàn...
+                Booking...
               } @else {
-                Xác nhận đặt bàn
+                Confirm Reservation
               }
               <mat-icon>check</mat-icon>
             </button>
@@ -378,7 +402,7 @@ const SERVICE_SESSIONS = {
             <div class="success-icon">
               <mat-icon>check_circle</mat-icon>
             </div>
-            <h3 class="card-title">Đặt bàn thành công!</h3>
+            <h3 class="card-title">Reservation Confirmed!</h3>
             <div class="success-details">
               <div class="detail-row">
                 <mat-icon>table_restaurant</mat-icon>
@@ -390,16 +414,16 @@ const SERVICE_SESSIONS = {
               </div>
               <div class="detail-row">
                 <mat-icon>people</mat-icon>
-                <span>{{ numberOfGuests() }} người</span>
+                <span>{{ numberOfGuests() }} guests</span>
               </div>
               <div class="detail-row">
                 <mat-icon>timer</mat-icon>
-                <span>Thời gian tối đa: {{ durationLabel() }}</span>
+                <span>Max Duration: {{ durationLabel() }}</span>
               </div>
             </div>
-            <p class="success-note">Nhà hàng sẽ xác nhận đặt bàn sớm nhất có thể. Cảm ơn bạn!</p>
+            <p class="success-note">The restaurant will confirm your reservation as soon as possible. Thank you!</p>
             <button type="button" class="next-btn" (click)="resetFlow()">
-              Đặt bàn khác
+              Make Another Reservation
               <mat-icon>refresh</mat-icon>
             </button>
           </mat-card-content>
@@ -417,7 +441,7 @@ const SERVICE_SESSIONS = {
             @if (selectedDate() && selectedTime()) {
               <span class="summary-item">
                 <mat-icon>event</mat-icon>
-                {{ selectedDate() }} lúc {{ selectedTime() }}
+                {{ selectedDate() }} at {{ selectedTime() }}
               </span>
             }
           </div>
@@ -544,6 +568,7 @@ const SERVICE_SESSIONS = {
 
     .legend-item.available .legend-dot { background: #2BAE66; }
     .legend-item.booked .legend-dot { background: #E06C6C; }
+    .legend-item.serving .legend-dot { background: #F0A500; }
 
     .legend-item.selected-legend .legend-dot { background: #C5A028; }
 
@@ -674,6 +699,7 @@ const SERVICE_SESSIONS = {
     .fp-table.available { border-color: #2BAE66; }
     .fp-table.available:hover { background: #2C2C2C; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(43,174,102,0.2); }
     .fp-table.booked { opacity: 0.4; cursor: not-allowed; border-color: #E06C6C; }
+    .fp-table.serving { opacity: 0.6; cursor: not-allowed; border-color: #F0A500; color: #F0A500; }
     .fp-table.selected { background: #C5A028; border-color: #C5A028; color: #0F0F0F; }
     .fp-table.selected .fp-table-code { color: #0F0F0F; }
     .fp-table.selected .fp-table-cap { color: #0F0F0F; }
@@ -895,8 +921,8 @@ export class CustomerReservationComponent implements OnInit {
   readonly capacityOptions = [2, 4, 6, 8, 10];
 
   readonly steps = [
-    { id: 'table', label: 'Chọn bàn' },
-    { id: 'datetime', label: 'Thời gian' },
+    { id: 'table', label: 'Select Table' },
+    { id: 'datetime', label: 'Date & Time' },
   ] as const;
 
   readonly dateOptions: DateOption[] = this.generateDateOptions();
@@ -939,14 +965,14 @@ export class CustomerReservationComponent implements OnInit {
     const mins = maxDurationMinutes(cap);
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return m > 0 ? `${h} tiếng ${m} phút` : `${h} tiếng`;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   });
 
   constructor(
     private readonly reservationService: ReservationService,
     private readonly router: Router,
     private readonly fb: FormBuilder
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Guard: chỉ cho phép truy cập nếu đã đăng nhập
@@ -956,13 +982,18 @@ export class CustomerReservationComponent implements OnInit {
       return;
     }
 
-    this.reservationService.getAvailableTables().subscribe({
+    this.loadTables();
+  }
+
+  loadTables(): void {
+    this.isLoading.set(true);
+    // Lấy tables + pending reservations song song, tính trạng thái hiển thị tổng hợp
+    this.reservationService.getTablesWithEffectiveStatus().subscribe({
       next: tables => {
         this.allTables.set(tables);
         this.isLoading.set(false);
       },
       error: (err) => {
-        // Token hết hạn hoặc không hợp lệ → redirect về login
         if (err?.status === 401 || err?.status === 403) {
           localStorage.removeItem('rms-token');
           this.router.navigateByUrl('/login');
@@ -1017,8 +1048,8 @@ export class CustomerReservationComponent implements OnInit {
   private generateDateOptions(): DateOption[] {
     const options: DateOption[] = [];
     const today = new Date();
-    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    const months = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for (let i = 0; i < 14; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -1036,7 +1067,7 @@ export class CustomerReservationComponent implements OnInit {
 
   formatConfirmedDateTime(): string {
     if (!this.selectedDate() || !this.selectedTime()) return '';
-    return `${this.selectedDate()} lúc ${this.selectedTime()}`;
+    return `${this.selectedDate()} at ${this.selectedTime()}`;
   }
 
   // ── Submit Reservation ──
@@ -1048,7 +1079,7 @@ export class CustomerReservationComponent implements OnInit {
     const customerId = userIdStr && !isNaN(Number(userIdStr)) ? Number(userIdStr) : null;
 
     if (!customerId) {
-      this.submitError.set('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.');
+      this.submitError.set('Invalid session. Please log in again.');
       this.router.navigateByUrl('/login');
       return;
     }
@@ -1074,7 +1105,7 @@ export class CustomerReservationComponent implements OnInit {
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        this.submitError.set(err?.message ?? 'Đặt bàn thất bại. Vui lòng thử lại.');
+        this.submitError.set(err?.message ?? 'Reservation failed. Please try again.');
       }
     });
   }
@@ -1090,5 +1121,6 @@ export class CustomerReservationComponent implements OnInit {
     this.note = '';
     this.submitError.set(null);
     this.currentStep.set('table');
+    this.loadTables();
   }
 }

@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, roleGuard, loginGuard } from './core/guards/auth.guards';
 import { AdminDashboardComponent } from './features/admin/admin-dashboard.component';
-import { DiscountManagementComponent } from './features/admin/discount-management.component';
+
 import { InventoryManagementComponent } from './features/admin/inventory-management.component';
 import { MenuManagementComponent } from './features/admin/menu-management.component';
 import { ReportsComponent } from './features/admin/reports.component';
@@ -36,7 +36,7 @@ export const routes: Routes = [
 			{ path: 'menu', component: MenuManagementComponent },
 			{ path: 'tables', component: TableManagementComponent },
 			{ path: 'inventory', component: InventoryManagementComponent },
-			{ path: 'discounts', component: DiscountManagementComponent },
+			
 			{ path: 'staff', component: StaffManagementComponent },
 			{ path: 'reports', component: ReportsComponent }
 		]

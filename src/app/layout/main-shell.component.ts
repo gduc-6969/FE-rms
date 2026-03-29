@@ -66,6 +66,32 @@ interface NavItem {
           </main>
         </mat-sidenav-content>
       </mat-sidenav-container>
+    } @else if (isStaff()) {
+      <section class="staff-shell">
+        <header class="staff-topbar">
+          <div class="staff-brand">
+            <span class="staff-brand-icon"><mat-icon>bar_chart</mat-icon></span>
+            <strong>Gastros</strong>
+          </div>
+
+          <button mat-icon-button (click)="logout()" aria-label="logout">
+            <mat-icon>logout</mat-icon>
+          </button>
+        </header>
+
+        <nav class="staff-nav">
+          @for (item of navItems(); track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="staff-active-link" class="staff-link">
+              <mat-icon>{{ item.icon }}</mat-icon>
+              <span>{{ item.label }}</span>
+            </a>
+          }
+        </nav>
+
+        <main class="staff-content">
+          <router-outlet />
+        </main>
+      </section>
     } @else {
       <section class="top-shell">
         <header class="topbar">
@@ -177,6 +203,79 @@ interface NavItem {
         }
       }
 
+      /* ── Staff light / orange theme ── */
+      .staff-shell {
+        min-height: 100dvh;
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        background: #f3f4f6;
+      }
+
+      .staff-topbar {
+        height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fafafa;
+      }
+
+      .staff-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .staff-brand strong {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .staff-brand-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: #ff6a33;
+        color: white;
+        display: grid;
+        place-items: center;
+      }
+
+      .staff-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 10px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fafafa;
+        overflow: auto;
+      }
+
+      .staff-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 140px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        color: #475569;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .staff-active-link {
+        background: #ffedd5;
+        color: #ea580c;
+      }
+
+      .staff-content {
+        padding: 16px;
+      }
+
+      /* ── Customer dark / gold theme ── */
       .top-shell {
         min-height: 100dvh;
         display: grid;
@@ -352,6 +451,7 @@ interface NavItem {
 export class MainShellComponent {
   readonly role = this.authService.role;
   readonly isAdmin = computed(() => this.role() === 'admin');
+  readonly isStaff = computed(() => this.role() === 'staff');
   readonly isCustomer = computed(() => this.role() === 'customer');
 
   readonly navByRole: Record<UserRole, NavItem[]> = {

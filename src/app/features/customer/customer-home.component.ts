@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { MenuService } from '../../core/services/menu.service';
-import { MenuItemResponse } from '../../core/models/app.models';
+import { MenuItemResponse, TableResponse } from '../../core/models/app.models';
 import { CustomerReservationFlowService } from '../../core/services/customer-reservation-flow.service';
 import { ReservationService } from '../../core/services/reservation.service';
 
@@ -847,8 +847,9 @@ export class CustomerHomeComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.reservationService.getAvailableTables().subscribe({
-      next: tables => this.bookableTables.set(tables.filter(t => t.status === 'trong').length),
+    this.reservationService.getAllTables().subscribe({
+      next: (tables: TableResponse[]) =>
+        this.bookableTables.set(tables.filter(t => t.status === 'trong').length),
       error: () => this.bookableTables.set(0)
     });
   }
