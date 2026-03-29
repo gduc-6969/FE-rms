@@ -55,8 +55,8 @@ const EVENING_SLOTS = buildShiftSlots(17, 22, 'evening');
 const ALL_SLOTS: TimeSlot[] = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
 const SERVICE_SESSIONS = {
-  morning: { cutoffHour: 9,  cutoffMin: 30, endHour: 14 },
-  evening: { cutoffHour: 16, cutoffMin: 0,  endHour: 22 }
+  morning: { cutoffHour: 9, cutoffMin: 30, endHour: 14 },
+  evening: { cutoffHour: 16, cutoffMin: 0, endHour: 22 }
 };
 
 @Component({
@@ -124,6 +124,7 @@ const SERVICE_SESSIONS = {
             <div class="legend-row">
               <span class="legend-item available"><span class="legend-dot"></span>Trống</span>
               <span class="legend-item booked"><span class="legend-dot"></span>Đã đặt</span>
+              <span class="legend-item serving"><span class="legend-dot"></span>Đang phục vụ</span>
               <span class="legend-item selected-legend"><span class="legend-dot"></span>Đã chọn</span>
             </div>
 
@@ -149,7 +150,13 @@ const SERVICE_SESSIONS = {
                     <div class="zone-label"><mat-icon>local_bar</mat-icon> Bar Area</div>
                     <div class="zone-tables">
                       @for (table of zones().bar; track table.id) {
-                        <button type="button" class="fp-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                        <button type="button" class="fp-table"
+                          [class.available]="table.status === 'trong'"
+                          [class.booked]="table.status === 'da_dat'"
+                          [class.serving]="table.status === 'dang_phuc_vu'"
+                          [class.selected]="selectedTableId() === table.id"
+                          [disabled]="table.status !== 'trong'"
+                          (click)="selectTable(table)">
                           <mat-icon>deck</mat-icon>
                           <span class="fp-table-code">{{ table.tableCode }}</span>
                           <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -171,7 +178,13 @@ const SERVICE_SESSIONS = {
                     <div class="zone-label"><mat-icon>weekend</mat-icon> Booth Alcoves</div>
                     <div class="zone-tables">
                       @for (table of zones().booth; track table.id) {
-                        <button type="button" class="fp-table booth-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                        <button type="button" class="fp-table booth-table"
+                          [class.available]="table.status === 'trong'"
+                          [class.booked]="table.status === 'da_dat'"
+                          [class.serving]="table.status === 'dang_phuc_vu'"
+                          [class.selected]="selectedTableId() === table.id"
+                          [disabled]="table.status !== 'trong'"
+                          (click)="selectTable(table)">
                           <mat-icon>weekend</mat-icon>
                           <span class="fp-table-code">{{ table.tableCode }}</span>
                           <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -188,7 +201,13 @@ const SERVICE_SESSIONS = {
                       <div class="zone-label"><mat-icon>table_bar</mat-icon> Communal Tables</div>
                       <div class="zone-tables">
                         @for (table of zones().communal; track table.id) {
-                          <button type="button" class="fp-table communal-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                          <button type="button" class="fp-table communal-table"
+                            [class.available]="table.status === 'trong'"
+                            [class.booked]="table.status === 'da_dat'"
+                            [class.serving]="table.status === 'dang_phuc_vu'"
+                            [class.selected]="selectedTableId() === table.id"
+                            [disabled]="table.status !== 'trong'"
+                            (click)="selectTable(table)">
                             <mat-icon>table_bar</mat-icon>
                             <span class="fp-table-code">{{ table.tableCode }}</span>
                             <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -204,7 +223,13 @@ const SERVICE_SESSIONS = {
                       <div class="zone-label"><mat-icon>restaurant</mat-icon> Main Dining</div>
                       <div class="zone-tables">
                         @for (table of zones().dining; track table.id) {
-                          <button type="button" class="fp-table" [class.available]="table.status === 'trong'" [class.booked]="table.status === 'da_dat'" [class.selected]="selectedTableId() === table.id" [disabled]="table.status !== 'trong'" (click)="selectTable(table)">
+                          <button type="button" class="fp-table"
+                            [class.available]="table.status === 'trong'"
+                            [class.booked]="table.status === 'da_dat'"
+                            [class.serving]="table.status === 'dang_phuc_vu'"
+                            [class.selected]="selectedTableId() === table.id"
+                            [disabled]="table.status !== 'trong'"
+                            (click)="selectTable(table)">
                             <mat-icon>table_restaurant</mat-icon>
                             <span class="fp-table-code">{{ table.tableCode }}</span>
                             <span class="fp-table-cap">{{ table.capacity }}p</span>
@@ -544,6 +569,7 @@ const SERVICE_SESSIONS = {
 
     .legend-item.available .legend-dot { background: #2BAE66; }
     .legend-item.booked .legend-dot { background: #E06C6C; }
+    .legend-item.serving .legend-dot { background: #F0A500; }
 
     .legend-item.selected-legend .legend-dot { background: #C5A028; }
 
@@ -674,6 +700,7 @@ const SERVICE_SESSIONS = {
     .fp-table.available { border-color: #2BAE66; }
     .fp-table.available:hover { background: #2C2C2C; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(43,174,102,0.2); }
     .fp-table.booked { opacity: 0.4; cursor: not-allowed; border-color: #E06C6C; }
+    .fp-table.serving { opacity: 0.6; cursor: not-allowed; border-color: #F0A500; color: #F0A500; }
     .fp-table.selected { background: #C5A028; border-color: #C5A028; color: #0F0F0F; }
     .fp-table.selected .fp-table-code { color: #0F0F0F; }
     .fp-table.selected .fp-table-cap { color: #0F0F0F; }
@@ -946,7 +973,7 @@ export class CustomerReservationComponent implements OnInit {
     private readonly reservationService: ReservationService,
     private readonly router: Router,
     private readonly fb: FormBuilder
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Guard: chỉ cho phép truy cập nếu đã đăng nhập
@@ -956,13 +983,18 @@ export class CustomerReservationComponent implements OnInit {
       return;
     }
 
-    this.reservationService.getAvailableTables().subscribe({
+    this.loadTables();
+  }
+
+  loadTables(): void {
+    this.isLoading.set(true);
+    // Lấy tables + pending reservations song song, tính trạng thái hiển thị tổng hợp
+    this.reservationService.getTablesWithEffectiveStatus().subscribe({
       next: tables => {
         this.allTables.set(tables);
         this.isLoading.set(false);
       },
       error: (err) => {
-        // Token hết hạn hoặc không hợp lệ → redirect về login
         if (err?.status === 401 || err?.status === 403) {
           localStorage.removeItem('rms-token');
           this.router.navigateByUrl('/login');
@@ -1018,7 +1050,7 @@ export class CustomerReservationComponent implements OnInit {
     const options: DateOption[] = [];
     const today = new Date();
     const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    const months = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+    const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
     for (let i = 0; i < 14; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -1090,5 +1122,6 @@ export class CustomerReservationComponent implements OnInit {
     this.note = '';
     this.submitError.set(null);
     this.currentStep.set('table');
+    this.loadTables();
   }
 }
