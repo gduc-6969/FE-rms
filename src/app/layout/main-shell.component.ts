@@ -460,7 +460,6 @@ export class MainShellComponent {
       { label: 'Quản lý thực đơn', icon: 'restaurant_menu', path: '/admin/menu' },
       { label: 'Quản lý bàn', icon: 'table_restaurant', path: '/admin/tables' },
       { label: 'Quản lý kho', icon: 'inventory_2', path: '/admin/inventory' },
-      { label: 'Quản lý giảm giá', icon: 'sell', path: '/admin/discounts' },
       { label: 'Quản lý nhân viên', icon: 'groups', path: '/admin/staff' },
       { label: 'Reports', icon: 'analytics', path: '/admin/reports' }
     ],
