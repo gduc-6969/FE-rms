@@ -1,18 +1,19 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import {
-  CustomerReservationFlowService,
-  CustomerReservation
-} from '../../core/services/customer-reservation-flow.service';
+import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
+import { ReservationService } from '../../core/services/reservation.service';
+import { ReservationResponse } from '../../core/models/app.models';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-customer-profile',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, RouterLink],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, RouterLink],
   template: `
     <section class="profile-page">
       <header class="section-title">My Profile</header>
@@ -37,9 +38,18 @@ import { AuthService } from '../../core/services/auth.service';
       <!-- Active Reservations Card -->
       <mat-card>
         <mat-card-content>
-          <h3><mat-icon>table_restaurant</mat-icon> My Reservations</h3>
+          <div class="header-refresh">
+            <h3><mat-icon>table_restaurant</mat-icon> My Reservations</h3>
+            <button mat-icon-button class="refresh-btn" (click)="loadMyReservations()" [disabled]="isLoading()" title="Reload data">
+              <mat-icon [class.spinning]="isLoading()">refresh</mat-icon>
+            </button>
+          </div>
 
-          @if (reservations().length === 0) {
+          @if (isLoading()) {
+            <div class="empty-reservations">
+              <p>Loading reservations...</p>
+            </div>
+          } @else if (activeReservations().length === 0) {
             <div class="empty-reservations">
               <p>No active reservations</p>
               <button mat-flat-button class="book-btn" routerLink="/customer/reservation">
@@ -49,23 +59,19 @@ import { AuthService } from '../../core/services/auth.service';
             </div>
           } @else {
             <div class="reservations-list">
-              @for (reservation of reservations(); track reservation.id) {
-                <div class="reservation-item" [class]="reservation.status">
+              @for (reservation of activeReservations(); track reservation.id) {
+                <div class="reservation-item" [class]="getStatusBadgeClass(reservation.status)">
                   <div class="reservation-info">
                     <div class="reservation-main">
-                      <strong>{{ reservation.table.name }}</strong>
-                      <span class="status-badge" [class]="reservation.status">
-                        @switch (reservation.status) {
-                          @case ('pending') { Pending }
-                          @case ('accepted') { Accepted }
-                          @case ('denied') { Denied }
-                        }
+                      <strong>Table {{ reservation.tableCode }}</strong>
+                      <span class="status-badge" [class]="getStatusBadgeClass(reservation.status)">
+                        {{ getStatusLabel(reservation.status) }}
                       </span>
                     </div>
                     <div class="reservation-details">
-                      <span><mat-icon>event</mat-icon> {{ formatDate(reservation.date) }}</span>
-                      <span><mat-icon>schedule</mat-icon> {{ reservation.time }}</span>
-                      <span><mat-icon>people</mat-icon> {{ reservation.guests }}</span>
+                      <span><mat-icon>event</mat-icon> {{ formatDate(reservation.reservationTime) }}</span>
+                      <span><mat-icon>schedule</mat-icon> {{ formatTime(reservation.reservationTime) }}</span>
+                      <span><mat-icon>people</mat-icon> {{ reservation.numberOfGuests }} guests</span>
                     </div>
                   </div>
                 </div>
@@ -83,22 +89,26 @@ import { AuthService } from '../../core/services/auth.service';
       <mat-card>
         <mat-card-content>
           <h3><mat-icon>history</mat-icon> Reservation History</h3>
-
-          <div class="history-item">
-            <div>
-              <p>March 10, 2026</p>
-              <small>7:00 PM · 2 guests</small>
-            </div>
-            <button mat-flat-button color="primary">Book Again</button>
-          </div>
-
-          <div class="history-item">
-            <div>
-              <p>February 25, 2026</p>
-              <small>8:30 PM · 4 guests</small>
-            </div>
-            <button mat-flat-button color="primary">Book Again</button>
-          </div>
+          
+          @if (isLoading()) {
+            <p style="color:#A0A0A0">Loading history...</p>
+          } @else if (historyReservations().length === 0) {
+            <p style="color:#A0A0A0">No past reservations.</p>
+          } @else {
+            @for (reservation of historyReservations(); track reservation.id) {
+              <div class="history-item">
+                <div>
+                  <p>{{ formatDate(reservation.reservationTime) }}</p>
+                  <small>{{ formatTime(reservation.reservationTime) }} · {{ reservation.numberOfGuests }} guests</small>
+                  <span class="status-badge history-badge" [class]="getStatusBadgeClass(reservation.status)">
+                    {{ getStatusLabel(reservation.status) }}
+                  </span>
+                </div>
+                <!-- Re-book functionality can potentially pre-fill the form later -->
+                <button mat-flat-button color="primary" routerLink="/customer/reservation">Book Again</button>
+              </div>
+            }
+          }
         </mat-card-content>
       </mat-card>
     </section>
@@ -199,6 +209,21 @@ import { AuthService } from '../../core/services/auth.service';
         color: #C5A028;
       }
 
+      .header-refresh {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .header-refresh h3 {
+        margin: 0;
+      }
+      .refresh-btn {
+        color: #C5A028;
+      }
+      @keyframes spin { 100% { transform: rotate(360deg); } }
+      .spinning { animation: spin 1s linear infinite; }
+
       /* Active Reservations */
       .empty-reservations {
         text-align: center;
@@ -220,6 +245,7 @@ import { AuthService } from '../../core/services/auth.service';
         font-weight: 600;
         padding: 12px 24px;
       }
+      .book-btn:hover { background: #D4AF37; }
 
       .reservations-list {
         display: flex;
@@ -264,6 +290,11 @@ import { AuthService } from '../../core/services/auth.service';
         border-radius: 12px;
         font-size: 12px;
         font-weight: 600;
+      }
+      
+      .history-badge {
+        margin-left: 10px;
+        display: inline-block;
       }
 
       .status-badge.pending {
@@ -313,6 +344,8 @@ import { AuthService } from '../../core/services/auth.service';
         border: 1px solid #C5A028;
         color: #C5A028;
         font-weight: 600;
+        background: transparent;
+        cursor: pointer;
       }
 
       .new-reservation-btn:hover {
@@ -342,7 +375,7 @@ import { AuthService } from '../../core/services/auth.service';
       }
 
       .history-item p {
-        margin: 0;
+        margin: 0 0 6px 0;
         color: #F0F0F0;
         font-weight: 600;
       }
@@ -357,6 +390,9 @@ import { AuthService } from '../../core/services/auth.service';
         color: #0F0F0F;
         font-weight: 600;
         border-radius: 12px;
+        padding: 8px 16px;
+        border: none;
+        cursor: pointer;
         transition: all 0.2s ease;
       }
 
@@ -387,16 +423,127 @@ import { AuthService } from '../../core/services/auth.service';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CustomerProfileComponent {
+export class CustomerProfileComponent implements OnInit {
   readonly authService = inject(AuthService);
-  readonly reservations = this.reservationFlow.myReservations;
+  private readonly reservationService = inject(ReservationService);
 
-  constructor(private readonly reservationFlow: CustomerReservationFlowService) {}
+  activeReservations = signal<ReservationResponse[]>([]);
+  historyReservations = signal<ReservationResponse[]>([]);
+  isLoading = signal(true);
+
+  ngOnInit() {
+    this.loadMyReservations();
+  }
+
+  loadMyReservations() {
+    this.isLoading.set(true);
+    
+    const userIdStr = localStorage.getItem('rms-user-id');
+    const customerId = userIdStr && !isNaN(Number(userIdStr)) ? Number(userIdStr) : null;
+    if (!customerId) {
+      this.isLoading.set(false);
+      this.activeReservations.set([]);
+      this.historyReservations.set([]);
+      return;
+    }
+
+    const key = `rms-my-reservation-ids-${customerId}`;
+    let idsJson = localStorage.getItem(key);
+
+    // MIGRATION: khôi phục tạm từ key cũ nếu key mới chưa có
+    if (!idsJson) {
+      const oldJson = localStorage.getItem('rms-my-reservation-ids');
+      if (oldJson) {
+        localStorage.setItem(key, oldJson);
+        idsJson = oldJson;
+      }
+    }
+
+    if (!idsJson) {
+      this.isLoading.set(false);
+      this.activeReservations.set([]);
+      this.historyReservations.set([]);
+      return;
+    }
+
+    let idsArray: number[] = [];
+    try {
+      idsArray = JSON.parse(idsJson);
+    } catch {
+      this.isLoading.set(false);
+      this.activeReservations.set([]);
+      this.historyReservations.set([]);
+      return;
+    }
+
+    if (idsArray.length === 0) {
+      this.isLoading.set(false);
+      this.activeReservations.set([]);
+      this.historyReservations.set([]);
+      return;
+    }
+
+    // Load each reservation ID individually
+    const requests = idsArray.map(id =>
+      this.reservationService.getReservationById(id).pipe(
+        catchError(() => of(null)) // Ignore errors for deleted or invalid reservations
+      )
+    );
+
+    forkJoin(requests).subscribe(results => {
+      // Filter out nulls and ensure reservation belongs to current customer (phòng khi type string/number)
+      const validReservations = results.filter((r): r is ReservationResponse => r !== null && Number(r.customerId) === customerId);
+      
+      // Categorize into Active (cho_xac_nhan, da_xac_nhan) and History (others)
+      const active = validReservations.filter(r => r.status === 'cho_xac_nhan' || r.status === 'da_xac_nhan');
+      const history = validReservations.filter(r => r.status === 'da_huy' || r.status === 'khach_den' || r.status === 'khach_khong_den');
+
+      // Sort by newest reservation time (descending)
+      active.sort((a, b) => new Date(b.reservationTime).getTime() - new Date(a.reservationTime).getTime());
+      history.sort((a, b) => new Date(b.reservationTime).getTime() - new Date(a.reservationTime).getTime());
+
+      this.activeReservations.set(active);
+      this.historyReservations.set(history);
+      this.isLoading.set(false);
+    });
+  }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'cho_xac_nhan': return 'pending';
+      case 'da_xac_nhan': return 'accepted';
+      case 'da_huy': return 'denied';
+      case 'khach_den': return 'accepted';
+      case 'khach_khong_den': return 'denied';
+      default: return 'pending';
+    }
+  }
+
+  getStatusLabel(status: string): string {
+    switch (status) {
+      case 'cho_xac_nhan': return 'Pending';
+      case 'da_xac_nhan': return 'Confirmed';
+      case 'da_huy': return 'Cancelled';
+      case 'khach_den': return 'Completed';
+      case 'khach_khong_den': return 'No Show';
+      default: return 'Pending';
+    }
+  }
 
   formatDate(dateStr: string): string {
     const date = new Date(dateStr);
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  }
+
+  formatTime(dateStr: string): string {
+    const date = new Date(dateStr);
+    let h = date.getHours();
+    const m = date.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    h = h ? h : 12; // the hour '0' should be '12'
+    return `${h}:${m} ${ampm}`;
   }
 }

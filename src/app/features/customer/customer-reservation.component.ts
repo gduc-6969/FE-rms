@@ -1099,7 +1099,18 @@ export class CustomerReservationComponent implements OnInit {
     this.submitError.set(null);
 
     this.reservationService.createReservation(payload).subscribe({
-      next: () => {
+      next: (res) => {
+        // Lưu ID của reservation vừa tạo vào localStorage định danh theo user
+        try {
+          const key = `rms-my-reservation-ids-${customerId}`;
+          const idsJson = localStorage.getItem(key);
+          const idsArray: number[] = idsJson ? JSON.parse(idsJson) : [];
+          idsArray.push(res.id);
+          localStorage.setItem(key, JSON.stringify(idsArray));
+        } catch (e) {
+          console.error('Failed to save reservation ID to local storage', e);
+        }
+
         this.isSubmitting.set(false);
         this.currentStep.set('success');
       },
