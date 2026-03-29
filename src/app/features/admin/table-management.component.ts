@@ -85,10 +85,6 @@ import { MockDataService } from '../../core/services/mock-data.service';
           <div class="stat-label">Total Capacity</div>
           <div class="stat-value">{{ totalCapacity() }} <span class="stat-unit">Seats</span></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Main Hall Tables</div>
-          <div class="stat-value">{{ mainHallCount() }}</div>
-        </div>
       </div>
 
       <!-- Table Grid -->
@@ -209,7 +205,7 @@ import { MockDataService } from '../../core/services/mock-data.service';
     /* ── Stats Row ── */
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 16px;
     }
     .stat-card {
@@ -369,10 +365,6 @@ export class TableManagementComponent {
 
   readonly totalCapacity = computed(() =>
     this.tables().reduce((sum, t) => sum + t.capacity, 0)
-  );
-
-  readonly mainHallCount = computed(() =>
-    this.tables().filter(t => t.area?.toLowerCase().includes('main hall') || t.area?.toLowerCase().includes('main')).length
   );
 
   /** Extract abbreviation: "Table 1" → "T1", "T2" → "T2" */

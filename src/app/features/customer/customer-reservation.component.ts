@@ -122,10 +122,9 @@ const SERVICE_SESSIONS = {
 
             <!-- Status legend -->
             <div class="legend-row">
-              <span class="legend-item available"><span class="legend-dot"></span>Trống</span>
-              <span class="legend-item booked"><span class="legend-dot"></span>Đã đặt</span>
-              <span class="legend-item serving"><span class="legend-dot"></span>Đang phục vụ</span>
-              <span class="legend-item selected-legend"><span class="legend-dot"></span>Đã chọn</span>
+              <span class="legend-item available"><span class="legend-dot"></span>Available</span>
+              <span class="legend-item booked"><span class="legend-dot"></span>Booked</span>
+              <span class="legend-item selected-legend"><span class="legend-dot"></span>Selected</span>
             </div>
 
             <!-- Loading skeleton -->
@@ -252,7 +251,7 @@ const SERVICE_SESSIONS = {
               @if (filteredTables().length === 0) {
                 <p class="hint">
                   <mat-icon>info</mat-icon>
-                  Không có bàn trống phù hợp với bộ lọc hiện tại.
+                  No available tables match the current filter.
                 </p>
               }
 
@@ -261,7 +260,7 @@ const SERVICE_SESSIONS = {
                 class="next-btn"
                 [disabled]="!selectedTableId()"
                 (click)="goToStep('datetime')">
-                Tiếp tục
+                Continue
                 <mat-icon>arrow_forward</mat-icon>
               </button>
             }
@@ -273,19 +272,19 @@ const SERVICE_SESSIONS = {
       @if (currentStep() === 'datetime') {
         <mat-card class="step-card">
           <mat-card-content>
-            <h3 class="card-title">Chọn ngày và giờ</h3>
+            <h3 class="card-title">Select Date & Time</h3>
 
             <!-- Selected table recap -->
             @if (selectedTable()) {
               <div class="selected-recap">
                 <mat-icon>table_restaurant</mat-icon>
-                <span>{{ selectedTable()!.tableCode }} · {{ selectedTable()!.capacity }} người · tối đa {{ durationLabel() }}</span>
+                <span>{{ selectedTable()!.tableCode }} · {{ selectedTable()!.capacity }} guests · max {{ durationLabel() }}</span>
               </div>
             }
 
             <!-- Date picker -->
             <div class="date-section">
-              <label class="section-label">Chọn ngày</label>
+              <label class="section-label">Select Date</label>
               <div class="date-chips">
                 @for (d of dateOptions; track d.value) {
                   <button
@@ -311,7 +310,7 @@ const SERVICE_SESSIONS = {
                 [class.shift-closed]="shiftStatus().morning.closed"
                 (click)="activeShift.set('morning')">
                 <mat-icon>wb_sunny</mat-icon>
-                Ca Sáng (10:00 – 14:00)
+                Morning Shift (10:00 – 14:00)
                 @if (shiftStatus().morning.closed) {
                   <span class="shift-closed-badge">Closed</span>
                 }
@@ -323,7 +322,7 @@ const SERVICE_SESSIONS = {
                 [class.shift-closed]="shiftStatus().evening.closed"
                 (click)="activeShift.set('evening')">
                 <mat-icon>nights_stay</mat-icon>
-                Ca Tối (17:00 – 22:00)
+                Evening Shift (17:00 – 22:00)
                 @if (shiftStatus().evening.closed) {
                   <span class="shift-closed-badge">Closed</span>
                 }
@@ -347,7 +346,7 @@ const SERVICE_SESSIONS = {
 
             <!-- Number of guests -->
             <div class="guests-row">
-              <label class="section-label">Số khách</label>
+              <label class="section-label">Number of Guests</label>
               <div class="guest-stepper">
                 <button
                   type="button"
@@ -356,7 +355,7 @@ const SERVICE_SESSIONS = {
                   (click)="numberOfGuests.set(numberOfGuests() - 1)">
                   <mat-icon>remove</mat-icon>
                 </button>
-                <span class="guest-count">{{ numberOfGuests() }} người</span>
+                <span class="guest-count">{{ numberOfGuests() }} guests</span>
                 <button
                   type="button"
                   class="stepper-btn"
@@ -369,7 +368,7 @@ const SERVICE_SESSIONS = {
 
             <!-- Note -->
             <mat-form-field class="notes-field" appearance="outline">
-              <mat-label>Ghi chú (tùy chọn)</mat-label>
+              <mat-label>Note (optional)</mat-label>
               <textarea matInput rows="2" [(ngModel)]="note" [ngModelOptions]="{standalone: true}"></textarea>
             </mat-form-field>
 
@@ -379,9 +378,9 @@ const SERVICE_SESSIONS = {
               [disabled]="!selectedDate() || !selectedTime()"
               (click)="confirmReservation()">
               @if (isSubmitting()) {
-                Đang đặt bàn...
+                Booking...
               } @else {
-                Xác nhận đặt bàn
+                Confirm Reservation
               }
               <mat-icon>check</mat-icon>
             </button>
@@ -403,7 +402,7 @@ const SERVICE_SESSIONS = {
             <div class="success-icon">
               <mat-icon>check_circle</mat-icon>
             </div>
-            <h3 class="card-title">Đặt bàn thành công!</h3>
+            <h3 class="card-title">Reservation Confirmed!</h3>
             <div class="success-details">
               <div class="detail-row">
                 <mat-icon>table_restaurant</mat-icon>
@@ -415,16 +414,16 @@ const SERVICE_SESSIONS = {
               </div>
               <div class="detail-row">
                 <mat-icon>people</mat-icon>
-                <span>{{ numberOfGuests() }} người</span>
+                <span>{{ numberOfGuests() }} guests</span>
               </div>
               <div class="detail-row">
                 <mat-icon>timer</mat-icon>
-                <span>Thời gian tối đa: {{ durationLabel() }}</span>
+                <span>Max Duration: {{ durationLabel() }}</span>
               </div>
             </div>
-            <p class="success-note">Nhà hàng sẽ xác nhận đặt bàn sớm nhất có thể. Cảm ơn bạn!</p>
+            <p class="success-note">The restaurant will confirm your reservation as soon as possible. Thank you!</p>
             <button type="button" class="next-btn" (click)="resetFlow()">
-              Đặt bàn khác
+              Make Another Reservation
               <mat-icon>refresh</mat-icon>
             </button>
           </mat-card-content>
@@ -442,7 +441,7 @@ const SERVICE_SESSIONS = {
             @if (selectedDate() && selectedTime()) {
               <span class="summary-item">
                 <mat-icon>event</mat-icon>
-                {{ selectedDate() }} lúc {{ selectedTime() }}
+                {{ selectedDate() }} at {{ selectedTime() }}
               </span>
             }
           </div>
@@ -922,8 +921,8 @@ export class CustomerReservationComponent implements OnInit {
   readonly capacityOptions = [2, 4, 6, 8, 10];
 
   readonly steps = [
-    { id: 'table', label: 'Chọn bàn' },
-    { id: 'datetime', label: 'Thời gian' },
+    { id: 'table', label: 'Select Table' },
+    { id: 'datetime', label: 'Date & Time' },
   ] as const;
 
   readonly dateOptions: DateOption[] = this.generateDateOptions();
@@ -966,7 +965,7 @@ export class CustomerReservationComponent implements OnInit {
     const mins = maxDurationMinutes(cap);
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return m > 0 ? `${h} tiếng ${m} phút` : `${h} tiếng`;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   });
 
   constructor(
@@ -1049,8 +1048,8 @@ export class CustomerReservationComponent implements OnInit {
   private generateDateOptions(): DateOption[] {
     const options: DateOption[] = [];
     const today = new Date();
-    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for (let i = 0; i < 14; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -1068,7 +1067,7 @@ export class CustomerReservationComponent implements OnInit {
 
   formatConfirmedDateTime(): string {
     if (!this.selectedDate() || !this.selectedTime()) return '';
-    return `${this.selectedDate()} lúc ${this.selectedTime()}`;
+    return `${this.selectedDate()} at ${this.selectedTime()}`;
   }
 
   // ── Submit Reservation ──
@@ -1080,7 +1079,7 @@ export class CustomerReservationComponent implements OnInit {
     const customerId = userIdStr && !isNaN(Number(userIdStr)) ? Number(userIdStr) : null;
 
     if (!customerId) {
-      this.submitError.set('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.');
+      this.submitError.set('Invalid session. Please log in again.');
       this.router.navigateByUrl('/login');
       return;
     }
@@ -1106,7 +1105,7 @@ export class CustomerReservationComponent implements OnInit {
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        this.submitError.set(err?.message ?? 'Đặt bàn thất bại. Vui lòng thử lại.');
+        this.submitError.set(err?.message ?? 'Reservation failed. Please try again.');
       }
     });
   }
