@@ -12,20 +12,29 @@ export class ReservationService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.API_BASE_URL;
 
+  /** Build auth headers with Bearer token and explicit JSON content type */
+  private authHeaders(): HttpHeaders {
+    const token = localStorage.getItem('rms-token');
+    if (!token) throw new Error('NOT_AUTHENTICATED');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
   getAvailableTables(): Observable<TableResponse[]> {
     return this.http
-      .get<ApiResponse<TableResponse[]>>(`${this.apiUrl}/tables`)
+      .get<ApiResponse<TableResponse[]>>(`${this.apiUrl}/tables`, {
+        headers: this.authHeaders()
+      })
       .pipe(map(res => res.data.filter(t => t.status === 'trong' || t.status === 'da_dat')));
   }
 
   createReservation(payload: CreateReservationRequest): Observable<ReservationResponse> {
-    const token = localStorage.getItem('rms-token');
-    const headers = token
-      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
-      : new HttpHeaders();
-
     return this.http
-      .post<ApiResponse<ReservationResponse>>(`${this.apiUrl}/reservations`, payload, { headers })
+      .post<ApiResponse<ReservationResponse>>(`${this.apiUrl}/reservations`, payload, {
+        headers: this.authHeaders()
+      })
       .pipe(map(res => res.data));
   }
 }

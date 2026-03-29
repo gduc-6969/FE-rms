@@ -30,7 +30,9 @@ export interface CustomerReservation {
   providedIn: 'root'
 })
 export class CustomerReservationFlowService {
-  readonly selectedDraft = signal<CustomerReservationDraft | null>(null);
+  private static readonly DRAFT_KEY = 'rms-reservation-draft';
+
+  readonly selectedDraft = signal<CustomerReservationDraft | null>(this.hydrateDraft());
   readonly myReservations = signal<CustomerReservation[]>([]);
 
   readonly tableLayout = signal<ReservationTableOption[]>(
@@ -47,10 +49,12 @@ export class CustomerReservationFlowService {
 
   setDraft(payload: CustomerReservationDraft): void {
     this.selectedDraft.set(payload);
+    sessionStorage.setItem(CustomerReservationFlowService.DRAFT_KEY, JSON.stringify(payload));
   }
 
   clearDraft(): void {
     this.selectedDraft.set(null);
+    sessionStorage.removeItem(CustomerReservationFlowService.DRAFT_KEY);
   }
 
   submitReservation(): void {
@@ -69,5 +73,16 @@ export class CustomerReservationFlowService {
 
     this.myReservations.update(reservations => [...reservations, newReservation]);
     this.clearDraft();
+  }
+
+  private hydrateDraft(): CustomerReservationDraft | null {
+    const raw = sessionStorage.getItem(CustomerReservationFlowService.DRAFT_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as CustomerReservationDraft;
+    } catch {
+      sessionStorage.removeItem(CustomerReservationFlowService.DRAFT_KEY);
+      return null;
+    }
   }
 }

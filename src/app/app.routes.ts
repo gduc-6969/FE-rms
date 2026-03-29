@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, roleGuard } from './core/guards/auth.guards';
+import { authGuard, roleGuard, loginGuard } from './core/guards/auth.guards';
 import { AdminDashboardComponent } from './features/admin/admin-dashboard.component';
 import { DiscountManagementComponent } from './features/admin/discount-management.component';
 import { InventoryManagementComponent } from './features/admin/inventory-management.component';
@@ -25,7 +25,7 @@ import { PublicMenuComponent } from './features/public/public-menu.component';
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', component: PublicHomeComponent },
 	{ path: 'menu', component: PublicMenuComponent },
-	{ path: 'login', component: LoginPageComponent },
+	{ path: 'login', component: LoginPageComponent, canActivate: [loginGuard] },
 	{
 		path: 'admin',
 		component: MainShellComponent,

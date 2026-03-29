@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,7 @@ import {
   CustomerReservationFlowService,
   CustomerReservation
 } from '../../core/services/customer-reservation-flow.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-customer-profile',
@@ -22,15 +23,13 @@ import {
           <div class="profile-head">
             <div class="avatar"><mat-icon>person</mat-icon></div>
             <div>
-              <h2>John Doe</h2>
-              <p>Member since Jan 2026</p>
+              <h2>{{ authService.fullName() ?? 'Guest' }}</h2>
+              <p>Member</p>
             </div>
           </div>
 
           <ul class="contact-list">
-            <li><mat-icon>mail</mat-icon> john.doe&#64;email.com</li>
-            <li><mat-icon>call</mat-icon> +1 (555) 123-4567</li>
-            <li><mat-icon>location_on</mat-icon> Downtown, City 12345</li>
+            <li><mat-icon>mail</mat-icon> {{ authService.fullName() ?? 'N/A' }}</li>
           </ul>
         </mat-card-content>
       </mat-card>
@@ -389,6 +388,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CustomerProfileComponent {
+  readonly authService = inject(AuthService);
   readonly reservations = this.reservationFlow.myReservations;
 
   constructor(private readonly reservationFlow: CustomerReservationFlowService) {}
@@ -397,6 +397,6 @@ export class CustomerProfileComponent {
     const date = new Date(dateStr);
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   }
 }

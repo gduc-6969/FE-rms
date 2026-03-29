@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,13 @@ import { RouterLink } from '@angular/router';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { MenuService } from '../../core/services/menu.service';
 import { MenuItemResponse } from '../../core/models/app.models';
+import { CustomerReservationFlowService } from '../../core/services/customer-reservation-flow.service';
+import { ReservationService } from '../../core/services/reservation.service';
+
+const HOME_SESSIONS = [
+  { id: 'lunch' as const,  label: 'Lunch Session',  start: 10, end: 14, cutoffHour: 9,  cutoffMin: 30 },
+  { id: 'dinner' as const, label: 'Dinner Session', start: 17, end: 22, cutoffHour: 16, cutoffMin: 0  }
+];
 
 @Component({
   selector: 'app-customer-home',
@@ -31,40 +38,60 @@ import { MenuItemResponse } from '../../core/models/app.models';
         </div>
       </div>
 
-      <!-- Booking Widget - Horizontal Stepper -->
+      <!-- Today's Dining Status Widget -->
       <mat-card class="booking-widget">
         <mat-card-content>
           <div class="booking-steps">
             <div class="booking-step">
-              <mat-icon>event</mat-icon>
+              <mat-icon>calendar_today</mat-icon>
               <div class="step-content">
-                <small>Date</small>
-                <strong>Tomorrow, Mar 20</strong>
+                <small>Today</small>
+                <strong>{{ todayLabel() }}</strong>
               </div>
             </div>
             <div class="step-divider"></div>
             <div class="booking-step">
               <mat-icon>schedule</mat-icon>
               <div class="step-content">
-                <small>Time</small>
-                <strong>7:30 PM</strong>
+                <small>Current Time</small>
+                <strong>{{ currentTimeLabel() }}</strong>
               </div>
             </div>
             <div class="step-divider"></div>
             <div class="booking-step">
-              <mat-icon>people</mat-icon>
+              <mat-icon>table_restaurant</mat-icon>
               <div class="step-content">
-                <small>Guests</small>
-                <strong>2 People</strong>
+                <small>Tables</small>
+                <strong>{{ bookableTables() }} Available</strong>
               </div>
             </div>
           </div>
+
+          <!-- Session Badge -->
+          <div class="session-badge-row">
+            <span class="session-pill" [class.session-active]="sessionActive()" [class.session-booking-open]="bookingOpen()">
+              <span class="session-indicator"></span>
+              {{ sessionLabel() }}
+            </span>
+            @if (bookingOpen()) {
+              <span class="booking-status open">
+                <mat-icon>check_circle</mat-icon>
+                Booking Open
+              </span>
+            } @else if (sessionActive()) {
+              <span class="booking-status closed">
+                <mat-icon>cancel</mat-icon>
+                Booking Closed
+              </span>
+            }
+          </div>
+
           <button class="check-availability" routerLink="/customer/reservation">
-            Check Availability
+            Book a Table
           </button>
           <p class="next-available">
             <mat-icon>access_time</mat-icon>
-            Next available: Today, 7:30 PM
+            {{ sessionNote() }}
           </p>
         </mat-card-content>
       </mat-card>
@@ -283,7 +310,7 @@ import { MenuItemResponse } from '../../core/models/app.models';
 
       .booking-steps {
         display: flex;
-        align-items: center;
+        align-items: stretch;
         justify-content: space-between;
         gap: 8px;
         margin-bottom: 16px;
@@ -300,6 +327,7 @@ import { MenuItemResponse } from '../../core/models/app.models';
         cursor: pointer;
         transition: all 0.2s ease;
         border: 1px solid transparent;
+        min-width: 0;
       }
 
       .booking-step:hover {
@@ -325,6 +353,7 @@ import { MenuItemResponse } from '../../core/models/app.models';
         color: #A0A0A0;
         text-transform: uppercase;
         letter-spacing: 0.1em;
+        white-space: nowrap;
       }
 
       .step-content strong {
@@ -374,6 +403,69 @@ import { MenuItemResponse } from '../../core/models/app.models';
         height: 16px;
         color: #2BAE66;
       }
+
+      /* Session Badge Row */
+      .session-badge-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 16px 0;
+        padding: 12px 16px;
+        background: #242424;
+        border-radius: 12px;
+      }
+
+      .session-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #A0A0A0;
+      }
+
+      .session-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #5A5A5A;
+        flex-shrink: 0;
+      }
+
+      .session-pill.session-active {
+        color: #F0F0F0;
+      }
+
+      .session-pill.session-active .session-indicator {
+        background: #2BAE66;
+        box-shadow: 0 0 6px rgba(43, 174, 102, 0.5);
+        animation: pulse 2s infinite;
+      }
+
+      .session-pill.session-booking-open .session-indicator {
+        background: #C5A028;
+        box-shadow: 0 0 6px rgba(197, 160, 40, 0.5);
+      }
+
+      .booking-status {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .booking-status mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      .booking-status.open { color: #2BAE66; }
+      .booking-status.closed { color: #E06C6C; }
 
       /* Menu Card */
       .menu-card {
@@ -726,19 +818,26 @@ import { MenuItemResponse } from '../../core/models/app.models';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CustomerHomeComponent implements OnInit {
+export class CustomerHomeComponent implements OnInit, OnDestroy {
+  // ── Backend data ──
   isLoading = signal(true);
   seasonalItems = signal<MenuItemResponse[]>([]);
   chefDishes = signal<MenuItemResponse[]>([]);
 
-  constructor(private readonly menuService: MenuService) {}
+  // ── Session / clock ──
+  private readonly reservationFlow = inject(CustomerReservationFlowService);
+  private readonly reservationService = inject(ReservationService);
+  private readonly nowMin = signal(this.currentMinOfDay());
+  private readonly clockHandle: ReturnType<typeof setInterval>;
+
+  constructor(private readonly menuService: MenuService) {
+    this.clockHandle = setInterval(() => this.nowMin.set(this.currentMinOfDay()), 60_000);
+  }
 
   ngOnInit(): void {
     this.menuService.getAvailableMenuItems().subscribe({
       next: items => {
-        // Lấy 3 món đầu cho Seasonal Specialties
         this.seasonalItems.set(items.slice(0, 3));
-        // Lấy 3 món tiếp theo cho Chef's Recommendations
         this.chefDishes.set(items.slice(3, 6));
         this.isLoading.set(false);
       },
@@ -747,5 +846,81 @@ export class CustomerHomeComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
+
+    this.reservationService.getAvailableTables().subscribe({
+      next: tables => this.bookableTables.set(tables.filter(t => t.status === 'trong').length),
+      error: () => this.bookableTables.set(0)
+    });
   }
+
+  ngOnDestroy(): void {
+    clearInterval(this.clockHandle);
+  }
+
+  private currentMinOfDay(): number {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+
+  readonly todayLabel = computed(() => {
+    this.nowMin();
+    const now = new Date();
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+  });
+
+  readonly currentTimeLabel = computed(() => {
+    const totalMin = this.nowMin();
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const dh = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    return `${dh}:${m.toString().padStart(2, '0')} ${period}`;
+  });
+
+  private readonly activeSession = computed(() => {
+    const min = this.nowMin();
+    return HOME_SESSIONS.find(s => min >= s.start * 60 && min < s.end * 60) ?? null;
+  });
+
+  readonly sessionActive = computed(() => !!this.activeSession());
+
+  readonly sessionLabel = computed(() => {
+    const s = this.activeSession();
+    if (s) return s.label;
+    const min = this.nowMin();
+    if (min < HOME_SESSIONS[0].start * 60) return 'Opening Soon';
+    if (min < HOME_SESSIONS[1].start * 60) return 'Afternoon Break';
+    return 'Closed for Tonight';
+  });
+
+  readonly bookingOpen = computed(() => {
+    const min = this.nowMin();
+    return HOME_SESSIONS.some(s => min < s.cutoffHour * 60 + s.cutoffMin && min < s.end * 60);
+  });
+
+  readonly sessionNote = computed(() => {
+    const min = this.nowMin();
+    const s = this.activeSession();
+    if (s) {
+      const cutoff = s.cutoffHour * 60 + s.cutoffMin;
+      if (min < cutoff) {
+        const p = s.cutoffHour >= 12 ? 'PM' : 'AM';
+        const dh = s.cutoffHour > 12 ? s.cutoffHour - 12 : s.cutoffHour;
+        return `Accepting reservations until ${dh}:${s.cutoffMin.toString().padStart(2, '0')} ${p}`;
+      }
+      return `${s.label} in progress · Walk-ins welcome`;
+    }
+    const dinner = HOME_SESSIONS[1];
+    if (min >= HOME_SESSIONS[0].end * 60 && min < dinner.start * 60) {
+      return min < dinner.cutoffHour * 60 + dinner.cutoffMin
+        ? 'Dinner starts at 5:00 PM · Reservations open'
+        : 'Dinner starts at 5:00 PM · Booking closed';
+    }
+    if (min < HOME_SESSIONS[0].start * 60) return 'Lunch begins at 10:00 AM';
+    return 'Restaurant is closed · See you tomorrow';
+  });
+
+  readonly bookableTables = signal(0);
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -70,6 +70,9 @@ interface NavItem {
       <section class="top-shell">
         <header class="topbar">
           <div class="top-brand">
+            <button class="back-arrow" (click)="goToLanding()" aria-label="Back to home">
+              <mat-icon>arrow_back</mat-icon>
+            </button>
             <img
               class="top-logo-image"
               src="/assets/logo.jpg"
@@ -78,14 +81,15 @@ interface NavItem {
             <strong>Desinare</strong>
           </div>
 
-          <button mat-icon-button (click)="logout()" aria-label="logout">
+          <button class="topbar-logout" (click)="logout()" aria-label="Sign out">
             <mat-icon>logout</mat-icon>
+            <span>Sign Out</span>
           </button>
         </header>
 
         <nav class="top-nav">
           @for (item of navItems(); track item.path) {
-            <a [routerLink]="item.path" routerLinkActive="active-top-link" class="top-link">
+            <a [routerLink]="item.path" [replaceUrl]="true" routerLinkActive="active-top-link" class="top-link">
               <mat-icon>{{ item.icon }}</mat-icon>
               <span>{{ item.label }}</span>
             </a>
@@ -223,6 +227,56 @@ interface NavItem {
         color: #C5A028;
       }
 
+      .back-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .back-arrow:hover {
+        border-color: #C5A028;
+        background: #2C2C2C;
+      }
+
+      .back-arrow mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .topbar-logout {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 10px;
+        background: transparent;
+        border: 1px solid #2C2C2C;
+        color: #A0A0A0;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .topbar-logout:hover {
+        border-color: #E06C6C;
+        color: #E06C6C;
+      }
+
+      .topbar-logout mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
       .top-nav {
         display: flex;
         align-items: center;
@@ -347,5 +401,9 @@ export class MainShellComponent {
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login'], { replaceUrl: true });
+  }
+
+  goToLanding(): void {
+    this.router.navigate(['/'], { replaceUrl: true });
   }
 }
