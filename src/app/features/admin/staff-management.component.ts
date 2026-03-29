@@ -172,8 +172,12 @@ export class StaffManagementComponent implements OnInit {
     this.staffService.getAllStaff()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: users => {
-          this.items.set(users);
+        next: page => {
+          // Lọc bỏ khách hàng và nhân viên đã nghỉ
+          const staff = page.content.filter(u =>
+            u.role !== 'KHACH_HANG' && u.status !== 'ngung_hoat_dong'
+          );
+          this.items.set(staff);
           this.loading.set(false);
         },
         error: () => {

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Role, UserResponse } from '../models/user.models';
+import { PageResponse } from '../models/pagination.models';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -15,14 +16,13 @@ export class StaffService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = 'http://localhost:8082/api/v1/users';
 
-  getAllStaff(): Observable<UserResponse[]> {    // thêm filter
+  getAllStaff(page = 0, size = 10): Observable<PageResponse<UserResponse>> {    
+    const params = new HttpParams()
+      .set('page', page)
+      .set('size', size);
     return this.http
-      .get<ApiResponse<UserResponse[]>>(this.baseUrl)
-      .pipe(
-        map(res => res.data.filter(u =>
-          u.role !== 'KHACH_HANG' && u.status !== 'ngung_hoat_dong'
-        ))
-      );
+      .get<ApiResponse<PageResponse<UserResponse>>>(`${this.baseUrl}/page`, { params })
+      .pipe(map(res => res.data));
   }
 
   getById(id: number): Observable<UserResponse> {

@@ -1,13 +1,22 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy, ChangeDetectorRef, Component,
+  DestroyRef, inject, OnInit, signal
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { InventoryItem } from '../../core/models/app.models';
-import { MockDataService } from '../../core/services/mock-data.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { IngredientRequest, IngredientResponse, IngredientStatus } from '../../core/models/ingredient.models';
+import { IngredientService } from '../../core/services/ingredient.service';
 
 @Component({
   selector: 'app-inventory-management',
@@ -19,7 +28,12 @@ import { MockDataService } from '../../core/services/mock-data.service';
     MatButtonModule,
     MatIconModule,
     MatInputModule,
-    MatFormFieldModule
+    MatFormFieldModule,
+    MatSelectModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatTooltipModule,
+    MatPaginatorModule
   ],
   template: `
     <section class="rms-page">
@@ -33,6 +47,23 @@ import { MockDataService } from '../../core/services/mock-data.service';
           Thêm nguyên liệu
         </button>
       </div>
+
+      <!-- Cảnh báo tồn kho thấp -->
+      @if (lowStockItems().length > 0) {
+        <mat-card class="warning-card">
+          <mat-card-content>
+            <div class="warning-header">
+              <mat-icon>warning</mat-icon>
+              <span>Cảnh báo tồn kho thấp ({{ lowStockItems().length }} nguyên liệu)</span>
+            </div>
+            <div class="warning-items">
+              @for (item of lowStockItems(); track item.id) {
+                <span class="warning-item">{{ item.name }}: {{ item.stockQuantity }}/{{ item.minStockQuantity }} {{ item.unit }}</span>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
 
       @if (editingId() !== null) {
         <mat-card>
@@ -50,17 +81,28 @@ import { MockDataService } from '../../core/services/mock-data.service';
 
               <mat-form-field appearance="outline">
                 <mat-label>Tồn kho</mat-label>
-                <input matInput type="number" min="0" formControlName="stock" />
+                <input matInput type="number" min="0" formControlName="stockQuantity" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Mức cảnh báo</mat-label>
-                <input matInput type="number" min="0" formControlName="alertLevel" />
+                <input matInput type="number" min="0" formControlName="minStockQuantity" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Trạng thái</mat-label>
+                <mat-select formControlName="status">
+                  <mat-option value="hoat_dong">Hoạt động</mat-option>
+                  <mat-option value="ngung_hoat_dong">Ngừng hoạt động</mat-option>
+                </mat-select>
               </mat-form-field>
 
               <div class="actions">
                 <button mat-stroked-button type="button" (click)="cancel()">Hủy</button>
-                <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Lưu</button>
+                <button mat-flat-button color="primary" type="submit" 
+                  [disabled]="form.invalid || loading()">
+                  {{ loading() ? 'Đang lưu...' : 'Lưu' }}
+                </button>
               </div>
             </form>
           </mat-card-content>
@@ -69,135 +111,226 @@ import { MockDataService } from '../../core/services/mock-data.service';
 
       <mat-card>
         <mat-card-content>
-          <table mat-table [dataSource]="items()" class="full-width">
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Tên</th>
-              <td mat-cell *matCellDef="let row">{{ row.name }}</td>
-            </ng-container>
+          @if (loading() && items().length === 0) {
+            <div class="loading-wrapper">
+              <mat-spinner diameter="40" />
+            </div>
+          } @else {
+            <table mat-table [dataSource]="items()" class="full-width">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Tên</th>
+                <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+              </ng-container>
 
-            <ng-container matColumnDef="unit">
-              <th mat-header-cell *matHeaderCellDef>Đơn vị</th>
-              <td mat-cell *matCellDef="let row">{{ row.unit }}</td>
-            </ng-container>
+              <ng-container matColumnDef="unit">
+                <th mat-header-cell *matHeaderCellDef>Đơn vị</th>
+                <td mat-cell *matCellDef="let row">{{ row.unit }}</td>
+              </ng-container>
 
-            <ng-container matColumnDef="stock">
-              <th mat-header-cell *matHeaderCellDef>Tồn kho</th>
-              <td mat-cell *matCellDef="let row" [class.low-stock]="row.stock < row.alertLevel">{{ row.stock }}</td>
-            </ng-container>
+              <ng-container matColumnDef="stockQuantity">
+                <th mat-header-cell *matHeaderCellDef>Tồn kho</th>
+                <td mat-cell *matCellDef="let row" 
+                  [class.low-stock]="row.stockQuantity <= row.minStockQuantity">
+                  {{ row.stockQuantity }}
+                </td>
+              </ng-container>
 
-            <ng-container matColumnDef="alertLevel">
-              <th mat-header-cell *matHeaderCellDef>Mức cảnh báo</th>
-              <td mat-cell *matCellDef="let row">{{ row.alertLevel }}</td>
-            </ng-container>
+              <ng-container matColumnDef="minStockQuantity">
+                <th mat-header-cell *matHeaderCellDef>Mức cảnh báo</th>
+                <td mat-cell *matCellDef="let row">{{ row.minStockQuantity }}</td>
+              </ng-container>
 
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>Hành động</th>
-              <td mat-cell *matCellDef="let row">
-                <button mat-icon-button (click)="startEdit(row)"><mat-icon>edit</mat-icon></button>
-                <button mat-icon-button color="warn" (click)="remove(row.id)"><mat-icon>delete</mat-icon></button>
-              </td>
-            </ng-container>
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Trạng thái</th>
+                <td mat-cell *matCellDef="let row">{{ statusLabel(row.status) }}</td>
+              </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-          </table>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Hành động</th>
+                <td mat-cell *matCellDef="let row">
+                  <button mat-icon-button (click)="startEdit(row)" matTooltip="Sửa">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="remove(row.id)" matTooltip="Xóa">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+
+            <mat-paginator
+              [length]="totalElements()"
+              [pageSize]="pageSize()"
+              [pageIndex]="currentPage()"
+              [pageSizeOptions]="[5, 10, 20, 50]"
+              (page)="onPageChange($event)"
+              showFirstLastButtons>
+            </mat-paginator>
+          }
         </mat-card-content>
       </mat-card>
     </section>
   `,
-  styles: [
-    `
-      .rms-page {
-        display: grid;
-        gap: 16px;
-      }
-
-      .page-header {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: center;
-      }
-
-      .page-header p {
-        margin: 4px 0 0;
-        color: #6b7280;
-      }
-
-      .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
-      }
-
-      .actions {
-        grid-column: 1 / -1;
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-      }
-
-      .full-width {
-        width: 100%;
-      }
-
-      .low-stock {
-        color: #dc2626;
-        font-weight: 700;
-      }
-    `
-  ],
+  styles: [`
+    .rms-page { display: grid; gap: 16px; }
+    .page-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .page-header p { margin: 4px 0 0; color: #6b7280; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+    .full-width { width: 100%; }
+    .low-stock { color: #dc2626; font-weight: 700; }
+    .loading-wrapper { display: flex; justify-content: center; padding: 40px; }
+    .warning-card { background: #fef3c7; border: 1px solid #f59e0b; }
+    .warning-header { display: flex; align-items: center; gap: 8px; color: #b45309; font-weight: 600; }
+    .warning-items { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .warning-item { background: #fff; padding: 4px 8px; border-radius: 4px; font-size: 13px; color: #92400e; }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class InventoryManagementComponent {
-  private readonly mockData = inject(MockDataService);
+export class InventoryManagementComponent implements OnInit {
+  private readonly ingredientService = inject(IngredientService);
   private readonly fb = inject(FormBuilder);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
-  readonly items = signal<InventoryItem[]>(this.mockData.getInventoryItems());
+  readonly items = signal<IngredientResponse[]>([]);
+  readonly lowStockItems = signal<IngredientResponse[]>([]);
   readonly editingId = signal<number | null>(null);
-  readonly displayedColumns = ['name', 'unit', 'stock', 'alertLevel', 'actions'];
+  readonly loading = signal(false);
+  
+  // Pagination
+  readonly currentPage = signal(0);
+  readonly pageSize = signal(10);
+  readonly totalElements = signal(0);
+
+  readonly displayedColumns = ['name', 'unit', 'stockQuantity', 'minStockQuantity', 'status', 'actions'];
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
     unit: ['', [Validators.required]],
-    stock: [0, [Validators.required, Validators.min(0)]],
-    alertLevel: [0, [Validators.required, Validators.min(0)]]
+    stockQuantity: [0, [Validators.required, Validators.min(0)]],
+    minStockQuantity: [0, [Validators.required, Validators.min(0)]],
+    status: ['hoat_dong' as IngredientStatus, [Validators.required]]
   });
+
+  statusLabel(status: IngredientStatus): string {
+    return status === 'hoat_dong' ? 'Hoạt động' : 'Ngừng hoạt động';
+  }
+
+  ngOnInit(): void {
+    this.loadIngredients();
+  }
+
+  private loadIngredients(): void {
+    this.loading.set(true);
+    this.ingredientService.getAll(this.currentPage(), this.pageSize())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: page => {
+          this.items.set(page.content);
+          this.totalElements.set(page.totalElements);
+          this.lowStockItems.set(
+            page.content.filter((i: IngredientResponse) => 
+              i.stockQuantity <= i.minStockQuantity && i.status === 'hoat_dong'
+            )
+          );
+          this.loading.set(false);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.showError('Không thể tải danh sách nguyên liệu');
+          this.loading.set(false);
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.currentPage.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.loadIngredients();
+  }
 
   startCreate(): void {
     this.editingId.set(0);
-    this.form.reset({ name: '', unit: '', stock: 0, alertLevel: 0 });
+    this.form.reset({ name: '', unit: '', stockQuantity: 0, minStockQuantity: 0, status: 'hoat_dong' });
   }
 
-  startEdit(item: InventoryItem): void {
+  startEdit(item: IngredientResponse): void {
     this.editingId.set(item.id);
-    this.form.reset(item);
+    this.form.reset({
+      name: item.name,
+      unit: item.unit,
+      stockQuantity: item.stockQuantity,
+      minStockQuantity: item.minStockQuantity,
+      status: item.status
+    });
   }
 
   save(): void {
-    if (this.form.invalid || this.editingId() === null) {
-      return;
-    }
+    const id = this.editingId();
+    if (this.form.invalid || id === null) return;
 
-    const raw = this.form.getRawValue();
-    const editingId = this.editingId();
+    const request: IngredientRequest = this.form.getRawValue();
+    this.loading.set(true);
 
-    if (editingId === 0) {
-      const nextId = Math.max(...this.items().map(item => item.id), 0) + 1;
-      this.items.update(items => [{ id: nextId, ...raw }, ...items]);
-    } else {
-      this.items.update(items => items.map(item => (item.id === editingId ? { id: editingId, ...raw } : item)));
-    }
+    const api$ = id === 0
+      ? this.ingredientService.create(request)
+      : this.ingredientService.update(id, request);
 
-    this.cancel();
+    api$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        if (id === 0) {
+          this.items.update(list => [result, ...list]);
+        } else {
+          this.items.update(list => list.map(i => i.id === id ? result : i));
+        }
+        this.cancel();
+        this.loading.set(false);
+        this.cdr.markForCheck();
+        this.showSuccess(id === 0 ? 'Thêm nguyên liệu thành công' : 'Cập nhật thành công');
+      },
+      error: () => {
+        this.showError(id === 0 ? 'Thêm nguyên liệu thất bại' : 'Cập nhật thất bại');
+        this.loading.set(false);
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   remove(id: number): void {
-    this.items.update(items => items.filter(item => item.id !== id));
+    this.loading.set(true);
+    this.ingredientService.delete(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.items.update(list => list.filter(i => i.id !== id));
+          this.loading.set(false);
+          this.cdr.markForCheck();
+          this.showSuccess('Xóa nguyên liệu thành công');
+        },
+        error: () => {
+          this.showError('Xóa nguyên liệu thất bại');
+          this.loading.set(false);
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   cancel(): void {
     this.editingId.set(null);
-    this.form.reset({ name: '', unit: '', stock: 0, alertLevel: 0 });
+    this.form.reset({ name: '', unit: '', stockQuantity: 0, minStockQuantity: 0, status: 'hoat_dong' });
+  }
+
+  private showSuccess(msg: string): void {
+    this.snackBar.open(msg, 'Đóng', { duration: 3000 });
+  }
+
+  private showError(msg: string): void {
+    this.snackBar.open(msg, 'Đóng', { duration: 4000, panelClass: 'snack-error' });
   }
 }
