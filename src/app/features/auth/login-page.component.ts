@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, signal, DestroyRef, inject } from '
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { UserRole } from '../../core/models/app.models';
@@ -18,6 +18,12 @@ import { UserRole } from '../../core/models/app.models';
   template: `
     <div class="login-page">
       <div class="login-card">
+        <!-- Back Button -->
+        <button class="back-btn" type="button" (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Back to Home
+        </button>
+
         <!-- Desinare Brand Header -->
         <div class="brand-block">
           <div class="brand-row">
@@ -49,6 +55,15 @@ import { UserRole } from '../../core/models/app.models';
                 formControlName="password"
                 placeholder="Password"
               />
+            </div>
+
+            <div class="form-options">
+              <label class="remember-me">
+                <input type="checkbox" formControlName="rememberMe" />
+                <span class="checkmark"></span>
+                Remember me
+              </label>
+              <button class="forgot-password" type="button" (click)="onForgotPassword()">Forgot password?</button>
             </div>
 
             @if (errorMessage()) {
@@ -151,6 +166,32 @@ import { UserRole } from '../../core/models/app.models';
         border: 1px solid #2C2C2C;
       }
 
+      /* Back Button */
+      .back-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: transparent;
+        border: none;
+        color: #A0A0A0;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0;
+        margin-bottom: 16px;
+        transition: color 0.2s ease;
+      }
+
+      .back-btn:hover {
+        color: #C5A028;
+      }
+
+      .back-btn mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
       /* Desinare Branding */
       .brand-block {
         text-align: center;
@@ -235,6 +276,87 @@ import { UserRole } from '../../core/models/app.models';
         font-size: 14px;
         margin: -8px 0 0 0;
         font-weight: 500;
+      }
+
+      /* Form Options Row */
+      .form-options {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: -4px 0;
+      }
+
+      .remember-me {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: #A0A0A0;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+      }
+
+      .remember-me input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .checkmark {
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        border: 1.5px solid #555;
+        border-radius: 4px;
+        background: #242424;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+      }
+
+      .checkmark::after {
+        content: '';
+        display: none;
+        width: 5px;
+        height: 9px;
+        border: solid #0F0F0F;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+        margin-top: -1px;
+      }
+
+      .remember-me input[type="checkbox"]:checked ~ .checkmark {
+        background: #C5A028;
+        border-color: #C5A028;
+      }
+
+      .remember-me input[type="checkbox"]:checked ~ .checkmark::after {
+        display: block;
+      }
+
+      .remember-me:hover .checkmark {
+        border-color: #C5A028;
+      }
+
+      .forgot-password {
+        background: transparent;
+        border: none;
+        color: #C5A028;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0;
+        transition: color 0.2s ease;
+      }
+
+      .forgot-password:hover {
+        color: #D4AF37;
+        text-decoration: underline;
+        text-underline-offset: 3px;
       }
 
       /* Submit Button */
@@ -356,6 +478,7 @@ export class LoginPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly mode = signal<'login' | 'register'>('login');
@@ -390,6 +513,10 @@ export class LoginPageComponent {
     this.errorMessage.set('Tính năng quên mật khẩu sẽ được cập nhật sớm.');
   }
 
+  goBack(): void {
+    this.router.navigate(['/']);
+  }
+
   onSocialLogin(provider: 'twitter' | 'google' | 'facebook'): void {
     this.errorMessage.set(`Đăng nhập bằng ${provider} sẽ được cập nhật sớm.`);
     // TODO: Implement social login integration
@@ -408,9 +535,14 @@ export class LoginPageComponent {
       .subscribe({
         next: () => {
           this.isLoading.set(false);
-          const role = this.authService.role();
-          if (role) {
-            this.goToRoleHome(role);
+          const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+          if (returnUrl) {
+            this.router.navigateByUrl(returnUrl, { replaceUrl: true });
+          } else {
+            const role = this.authService.role();
+            if (role) {
+              this.goToRoleHome(role);
+            }
           }
         },
         error: (err) => {

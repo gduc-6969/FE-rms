@@ -19,9 +19,12 @@ import { StaffShiftComponent } from './features/staff/staff-shift.component';
 import { StaffTableWorkspaceComponent } from './features/staff/staff-table-workspace.component';
 import { WaiterTablesComponent } from './features/waiter/waiter-tables.component';
 import { MainShellComponent } from './layout/main-shell.component';
+import { PublicHomeComponent } from './features/public/public-home.component';
+import { PublicMenuComponent } from './features/public/public-menu.component';
 
 export const routes: Routes = [
-	{ path: '', pathMatch: 'full', redirectTo: 'login' },
+	{ path: '', pathMatch: 'full', component: PublicHomeComponent },
+	{ path: 'menu', component: PublicMenuComponent },
 	{ path: 'login', component: LoginPageComponent },
 	{
 		path: 'admin',
