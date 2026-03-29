@@ -510,15 +510,15 @@ export class LoginPageComponent {
   }
 
   onForgotPassword(): void {
-    this.errorMessage.set('Tính năng quên mật khẩu sẽ được cập nhật sớm.');
+    this.errorMessage.set('Forgot password feature coming soon.');
   }
 
   goBack(): void {
-    this.router.navigate(['/']);
+    this.router.navigate(['/'], { replaceUrl: true });
   }
 
   onSocialLogin(provider: 'twitter' | 'google' | 'facebook'): void {
-    this.errorMessage.set(`Đăng nhập bằng ${provider} sẽ được cập nhật sớm.`);
+    this.errorMessage.set(`Social login via ${provider} coming soon.`);
     // TODO: Implement social login integration
   }
 
@@ -536,7 +536,7 @@ export class LoginPageComponent {
         next: () => {
           this.isLoading.set(false);
           const returnUrl = this.route.snapshot.queryParams['returnUrl'];
-          if (returnUrl) {
+          if (returnUrl && this.isSafeReturnUrl(returnUrl)) {
             this.router.navigateByUrl(returnUrl, { replaceUrl: true });
           } else {
             const role = this.authService.role();
@@ -547,10 +547,10 @@ export class LoginPageComponent {
         },
         error: (err) => {
           this.isLoading.set(false);
-          this.errorMessage.set(err.message || 'Lỗi đăng nhập');
+          this.errorMessage.set(err.message || 'Login failed');
           // Error handling based on errorCode: USER_NOT_FOUND or INVALID_PASSWORD
           if (err.errorCode === 'USER_NOT_FOUND') {
-            this.errorMessage.set('Tài khoản không tồn tại. Bạn chưa có tài khoản? Đăng ký ngay!');
+            this.errorMessage.set('Account not found. Don\'t have an account? Sign up now!');
           }
         }
       });
@@ -570,15 +570,15 @@ export class LoginPageComponent {
       .subscribe({
         next: () => {
           this.isLoading.set(false);
-          alert('Đăng ký thành công! Vui lòng đăng nhập.');
+          alert('Registration successful! Please sign in.');
           this.mode.set('login');
           this.loginForm.patchValue({ email: payload.email, password: '' });
         },
         error: (err) => {
           this.isLoading.set(false);
-          this.errorMessage.set(err.message || 'Lỗi đăng ký');
+          this.errorMessage.set(err.message || 'Registration failed');
           if (err.errorCode === 'EMAIL_EXISTS') {
-             this.errorMessage.set('Email đã tồn tại. Vui lòng sử dụng email khác.');
+             this.errorMessage.set('Email already exists. Please use a different email.');
           }
         }
       });
@@ -592,6 +592,10 @@ export class LoginPageComponent {
     };
 
     this.router.navigate([routeMap[role]], { replaceUrl: true });
+  }
+
+  private isSafeReturnUrl(url: string): boolean {
+    return url.startsWith('/') && !url.startsWith('//') && !url.includes('://');
   }
 }
 

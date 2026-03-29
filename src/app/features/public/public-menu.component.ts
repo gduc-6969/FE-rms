@@ -37,14 +37,37 @@ const ALL_CATEGORY_ID = -1;
           <span class="nav-name">Desinare</span>
         </div>
         <div class="nav-links">
-          <a class="nav-link" routerLink="/">Home</a>
+          <a class="nav-link" routerLink="/" [replaceUrl]="true">Home</a>
           <a class="nav-link active">Menu</a>
           <a class="nav-link" (click)="onBookTable()">Reservation</a>
         </div>
-        <a class="nav-login" routerLink="/login">
-          <mat-icon>person_outline</mat-icon>
-          Sign In
-        </a>
+        @if (authService.isAuthenticated()) {
+          <div class="nav-user" (click)="toggleUserMenu()">
+            <div class="user-avatar">
+              <mat-icon>person</mat-icon>
+            </div>
+            <span class="user-name">{{ authService.fullName() ?? 'User' }}</span>
+            <mat-icon class="chevron" [class.open]="userMenuOpen()">expand_more</mat-icon>
+          </div>
+          @if (userMenuOpen()) {
+            <div class="user-dropdown-backdrop" (click)="userMenuOpen.set(false)"></div>
+            <div class="user-dropdown">
+              <a class="dropdown-item" (click)="goToAccount()">
+                <mat-icon>account_circle</mat-icon>
+                Account
+              </a>
+              <a class="dropdown-item sign-out" (click)="onSignOut()">
+                <mat-icon>logout</mat-icon>
+                Sign Out
+              </a>
+            </div>
+          }
+        } @else {
+          <a class="nav-login" routerLink="/login">
+            <mat-icon>person_outline</mat-icon>
+            Sign In
+          </a>
+        }
       </nav>
 
       <!-- Content Area -->
@@ -79,7 +102,18 @@ const ALL_CATEGORY_ID = -1;
           </div>
         }
 
-        @if (!isLoading()) {
+        @if (loadError()) {
+          <div class="error-state">
+            <mat-icon>error_outline</mat-icon>
+            <p>Failed to load the menu. Please try again.</p>
+            <button class="retry-btn" (click)="retryLoad()">
+              <mat-icon>refresh</mat-icon>
+              Retry
+            </button>
+          </div>
+        }
+
+        @if (!isLoading() && !loadError()) {
           <!-- Category Pills -->
           <div class="category-pills">
             <button
@@ -379,6 +413,121 @@ const ALL_CATEGORY_ID = -1;
       height: 18px;
     }
 
+    /* Avatar dropdown */
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px 6px 6px;
+      border: 1px solid #2C2C2C;
+      border-radius: 28px;
+      background: rgba(26, 26, 26, 0.7);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      user-select: none;
+    }
+
+    .nav-user:hover {
+      border-color: #C5A028;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #C5A028;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-avatar mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #0F0F0F;
+    }
+
+    .user-name {
+      color: #F0F0F0;
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chevron {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #A0A0A0;
+      transition: transform 0.2s ease;
+    }
+
+    .chevron.open {
+      transform: rotate(180deg);
+    }
+
+    .user-dropdown-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 199;
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 60px;
+      right: 32px;
+      z-index: 200;
+      background: #1A1A1A;
+      border: 1px solid #2C2C2C;
+      border-radius: 12px;
+      padding: 8px;
+      min-width: 180px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: #F0F0F0;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .dropdown-item:hover {
+      background: #242424;
+    }
+
+    .dropdown-item mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #A0A0A0;
+    }
+
+    .dropdown-item:hover mat-icon {
+      color: #C5A028;
+    }
+
+    .dropdown-item.sign-out:hover {
+      background: rgba(224, 108, 108, 0.1);
+      color: #E06C6C;
+    }
+
+    .dropdown-item.sign-out:hover mat-icon {
+      color: #E06C6C;
+    }
+
     /* Content */
     .menu-content {
       max-width: 720px;
@@ -487,6 +636,40 @@ const ALL_CATEGORY_ID = -1;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 48px 0;
+      color: #E06C6C;
+    }
+
+    .error-state mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+    }
+
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      background: #C5A028;
+      border: none;
+      color: #0F0F0F;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .retry-btn:hover {
+      background: #D4AF37;
+    }
 
     /* Category pills */
     .category-pills {
@@ -698,6 +881,7 @@ export class PublicMenuComponent implements OnInit {
   categories = signal<CategoryResponse[]>([]);
   allItems = signal<MenuItemResponse[]>([]);
   isLoading = signal(true);
+  loadError = signal(false);
   selectedCategoryId = signal<number>(ALL_CATEGORY_ID);
 
   readonly displayedItems = computed(() => {
@@ -719,6 +903,17 @@ export class PublicMenuComponent implements OnInit {
   constructor(private readonly menuService: MenuService) {}
 
   ngOnInit(): void {
+    this.loadMenu();
+  }
+
+  retryLoad(): void {
+    this.loadMenu();
+  }
+
+  private loadMenu(): void {
+    this.isLoading.set(true);
+    this.loadError.set(false);
+
     this.menuService.getCategories().subscribe({
       next: cats => this.categories.set(cats.filter(c => c.status === 'hoat_dong')),
       error: err => console.error('Failed to load categories', err)
@@ -729,7 +924,10 @@ export class PublicMenuComponent implements OnInit {
         this.allItems.set(items);
         this.isLoading.set(false);
       },
-      error: () => this.isLoading.set(false)
+      error: () => {
+        this.isLoading.set(false);
+        this.loadError.set(true);
+      }
     });
   }
 
@@ -741,9 +939,25 @@ export class PublicMenuComponent implements OnInit {
     return this.allItems().filter(i => i.categoryId === categoryId).length;
   }
 
-  private readonly authService = inject(AuthService);
+  readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   showLoginPrompt = signal(false);
+  userMenuOpen = signal(false);
+
+  toggleUserMenu(): void {
+    this.userMenuOpen.set(!this.userMenuOpen());
+  }
+
+  goToAccount(): void {
+    this.userMenuOpen.set(false);
+    this.router.navigate(['/customer/home'], { replaceUrl: true });
+  }
+
+  onSignOut(): void {
+    this.userMenuOpen.set(false);
+    this.authService.logout();
+    this.router.navigate(['/'], { replaceUrl: true });
+  }
 
   onBookTable(): void {
     if (this.authService.isAuthenticated()) {

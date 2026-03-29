@@ -25,7 +25,21 @@ interface TimeSlot {
   value: string;
   available: boolean;
   popular?: boolean;
+  sessionId: 'lunch' | 'dinner';
+  sessionClosed: boolean;
 }
+
+interface SessionGroup {
+  id: 'lunch' | 'dinner';
+  label: string;
+  closed: boolean;
+  slots: TimeSlot[];
+}
+
+const SERVICE_SESSIONS = [
+  { id: 'lunch' as const,  label: 'Lunch Session',  start: 10, end: 14, cutoffHour: 9,  cutoffMin: 30 },
+  { id: 'dinner' as const, label: 'Dinner Session', start: 17, end: 22, cutoffHour: 16, cutoffMin: 0  }
+];
 
 @Component({
   selector: 'app-customer-reservation',
@@ -150,23 +164,33 @@ interface TimeSlot {
               <!-- Time Selection -->
               <div class="time-section">
                 <label class="section-label">Select Time</label>
-                <div class="time-chips">
-                  @for (slot of timeSlots; track slot.value) {
-                    <button
-                      type="button"
-                      class="time-chip"
-                      [class.active]="form.controls.time.value === slot.value"
-                      [class.unavailable]="!slot.available"
-                      [class.popular]="slot.popular"
-                      [disabled]="!slot.available"
-                      (click)="selectTime(slot.value)">
-                      {{ slot.label }}
-                      @if (slot.popular) {
-                        <span class="popular-badge">Popular</span>
+                @for (session of sessionedTimeSlots(); track session.id) {
+                  <div class="session-group">
+                    <div class="session-header">
+                      <span class="session-name">{{ session.label }}</span>
+                      @if (session.closed) {
+                        <span class="session-closed-badge">Booking Closed</span>
                       }
-                    </button>
-                  }
-                </div>
+                    </div>
+                    <div class="time-chips">
+                      @for (slot of session.slots; track slot.value) {
+                        <button
+                          type="button"
+                          class="time-chip"
+                          [class.active]="form.controls.time.value === slot.value"
+                          [class.unavailable]="!slot.available"
+                          [class.popular]="slot.popular"
+                          [disabled]="!slot.available"
+                          (click)="selectTime(slot.value)">
+                          {{ slot.label }}
+                          @if (slot.popular) {
+                            <span class="popular-badge">Popular</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
               </div>
 
               <button
@@ -614,6 +638,41 @@ interface TimeSlot {
         margin-bottom: 24px;
       }
 
+      .session-group {
+        margin-bottom: 20px;
+      }
+
+      .session-group:last-child {
+        margin-bottom: 0;
+      }
+
+      .session-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .session-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #C5A028;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .session-closed-badge {
+        padding: 4px 10px;
+        background: rgba(224, 108, 108, 0.15);
+        border: 1px solid #E06C6C;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #E06C6C;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
       .time-chips {
         display: flex;
         flex-wrap: wrap;
@@ -969,13 +1028,47 @@ export class CustomerReservationComponent {
 
   readonly currentStep = signal<'guests' | 'datetime' | 'table'>('guests');
   readonly selectedArea = signal('All');
-  readonly quickSizes = [2, 4, 6];
+  readonly quickSizes = [2, 4, 6, 8];
   readonly tableAreas = ['All', 'Indoor', 'Outdoor', 'VIP'];
 
   readonly tableLayout = this.reservationFlow.tableLayout;
 
+  readonly selectedDate = signal('');
   readonly dateOptions: DateOption[] = this.generateDateOptions();
-  readonly timeSlots: TimeSlot[] = this.generateTimeSlots();
+  readonly sessionedTimeSlots = computed<SessionGroup[]>(() => {
+    const dateStr = this.selectedDate();
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const isToday = dateStr === today;
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+
+    return SERVICE_SESSIONS.map(session => {
+      const sessionClosed = isToday && (
+        currentHour > session.cutoffHour ||
+        (currentHour === session.cutoffHour && currentMin >= session.cutoffMin)
+      );
+
+      const slots: TimeSlot[] = [];
+      for (let hour = session.start; hour < session.end; hour++) {
+        for (const min of [0, 30]) {
+          const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+          const label = this.formatTime(hour, min);
+          const isPast = isToday && (hour < currentHour || (hour === currentHour && min <= currentMin));
+          const popular = session.id === 'dinner' && ['19:00', '19:30', '20:00'].includes(timeStr);
+          slots.push({
+            label,
+            value: timeStr,
+            available: !sessionClosed && !isPast,
+            popular,
+            sessionId: session.id,
+            sessionClosed
+          });
+        }
+      }
+      return { id: session.id, label: session.label, closed: sessionClosed, slots };
+    });
+  });
 
   readonly filteredTables = computed(() => {
     const area = this.selectedArea();
@@ -1089,6 +1182,8 @@ export class CustomerReservationComponent {
   // Date Selection
   selectDate(date: string): void {
     this.form.controls.date.setValue(date);
+    this.selectedDate.set(date);
+    this.form.controls.time.setValue('');
   }
 
   private generateDateOptions(): DateOption[] {
@@ -1129,28 +1224,6 @@ export class CustomerReservationComponent {
   // Time Selection
   selectTime(time: string): void {
     this.form.controls.time.setValue(time);
-  }
-
-  private generateTimeSlots(): TimeSlot[] {
-    const slots: TimeSlot[] = [];
-    const popularTimes = ['19:00', '19:30', '20:00'];
-
-    for (let hour = 11; hour <= 21; hour++) {
-      for (const min of ['00', '30']) {
-        if (hour === 21 && min === '30') continue;
-
-        const time = `${hour.toString().padStart(2, '0')}:${min}`;
-        const label = this.formatTime(hour, parseInt(min));
-
-        slots.push({
-          label,
-          value: time,
-          available: Math.random() > 0.2,
-          popular: popularTimes.includes(time)
-        });
-      }
-    }
-    return slots;
   }
 
   private formatTime(hour: number, min: number): string {

@@ -17,14 +17,37 @@ import { AuthService } from '../../core/services/auth.service';
           <span class="nav-name">Desinare</span>
         </div>
         <div class="nav-links">
-          <a class="nav-link" routerLink="/">Home</a>
-          <a class="nav-link" routerLink="/menu">Menu</a>
+          <a class="nav-link" routerLink="/" [replaceUrl]="true">Home</a>
+          <a class="nav-link" routerLink="/menu" [replaceUrl]="true">Menu</a>
           <a class="nav-link" (click)="onBookTable()">Reservation</a>
         </div>
-        <a class="nav-login" routerLink="/login">
-          <mat-icon>person_outline</mat-icon>
-          Sign In
-        </a>
+        @if (authService.isAuthenticated()) {
+          <div class="nav-user" (click)="toggleUserMenu()">
+            <div class="user-avatar">
+              <mat-icon>person</mat-icon>
+            </div>
+            <span class="user-name">{{ authService.fullName() ?? 'User' }}</span>
+            <mat-icon class="chevron" [class.open]="userMenuOpen()">expand_more</mat-icon>
+          </div>
+          @if (userMenuOpen()) {
+            <div class="user-dropdown-backdrop" (click)="userMenuOpen.set(false)"></div>
+            <div class="user-dropdown">
+              <a class="dropdown-item" (click)="goToAccount()">
+                <mat-icon>account_circle</mat-icon>
+                Account
+              </a>
+              <a class="dropdown-item sign-out" (click)="onSignOut()">
+                <mat-icon>logout</mat-icon>
+                Sign Out
+              </a>
+            </div>
+          }
+        } @else {
+          <a class="nav-login" routerLink="/login">
+            <mat-icon>person_outline</mat-icon>
+            Sign In
+          </a>
+        }
         <button class="mobile-menu-btn" (click)="mobileMenuOpen.set(!mobileMenuOpen())">
           <mat-icon>{{ mobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
         </button>
@@ -33,12 +56,21 @@ import { AuthService } from '../../core/services/auth.service';
       <!-- Mobile Menu -->
       @if (mobileMenuOpen()) {
         <div class="mobile-menu">
-          <a class="mobile-link" routerLink="/" (click)="mobileMenuOpen.set(false)">Home</a>
-          <a class="mobile-link" routerLink="/menu" (click)="mobileMenuOpen.set(false)">Menu</a>
+          <a class="mobile-link" routerLink="/" [replaceUrl]="true" (click)="mobileMenuOpen.set(false)">Home</a>
+          <a class="mobile-link" routerLink="/menu" [replaceUrl]="true" (click)="mobileMenuOpen.set(false)">Menu</a>
           <a class="mobile-link" (click)="onBookTable(); mobileMenuOpen.set(false)">Reservation</a>
-          <a class="mobile-link sign-in" routerLink="/login" (click)="mobileMenuOpen.set(false)">
-            <mat-icon>person_outline</mat-icon> Sign In
-          </a>
+          @if (authService.isAuthenticated()) {
+            <a class="mobile-link" (click)="goToAccount(); mobileMenuOpen.set(false)">
+              <mat-icon>account_circle</mat-icon> Account
+            </a>
+            <a class="mobile-link sign-out" (click)="onSignOut(); mobileMenuOpen.set(false)">
+              <mat-icon>logout</mat-icon> Sign Out
+            </a>
+          } @else {
+            <a class="mobile-link sign-in" routerLink="/login" (click)="mobileMenuOpen.set(false)">
+              <mat-icon>person_outline</mat-icon> Sign In
+            </a>
+          }
         </div>
       }
 
@@ -63,7 +95,7 @@ import { AuthService } from '../../core/services/auth.service';
               <mat-icon>calendar_today</mat-icon>
               Book a Table
             </a>
-            <a class="cta-secondary" routerLink="/menu">
+            <a class="cta-secondary" routerLink="/menu" [replaceUrl]="true">
               Explore Our Menu
               <mat-icon>arrow_forward</mat-icon>
             </a>
@@ -142,59 +174,6 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       </section>
 
-      <!-- Menu Preview -->
-      <section class="menu-preview">
-        <div class="section-header">
-          <h2>Signature Dishes</h2>
-          <a class="section-link" routerLink="/menu">View Full Menu <mat-icon>arrow_forward</mat-icon></a>
-        </div>
-        <div class="menu-grid">
-          @for (dish of signatureDishes; track dish.name) {
-            <div class="menu-preview-card">
-              <div class="menu-img-placeholder">
-                <mat-icon>{{ dish.icon }}</mat-icon>
-              </div>
-              <div class="menu-preview-info">
-                <h4>{{ dish.name }}</h4>
-                <p>{{ dish.description }}</p>
-                <span class="menu-price">{{ dish.price }}</span>
-              </div>
-            </div>
-          }
-        </div>
-      </section>
-
-      <!-- Chef's Recommendations -->
-      <section class="chef-section">
-        <div class="section-header">
-          <div class="chef-header-row">
-            <h2>Chef's Recommendations</h2>
-            <span class="chef-badge">
-              <mat-icon>workspace_premium</mat-icon>
-              Chef's Pick
-            </span>
-          </div>
-          <a class="section-link" routerLink="/menu">Discover More <mat-icon>arrow_forward</mat-icon></a>
-        </div>
-        <div class="chef-grid">
-          @for (pick of chefPicks; track pick.name) {
-            <div class="chef-card">
-              <div class="chef-img-placeholder">
-                <mat-icon>{{ pick.icon }}</mat-icon>
-              </div>
-              <div class="chef-pick-badge-small">
-                <mat-icon>star</mat-icon>
-              </div>
-              <div class="chef-card-info">
-                <h4>{{ pick.name }}</h4>
-                <p>{{ pick.description }}</p>
-                <span class="menu-price">{{ pick.price }}</span>
-              </div>
-            </div>
-          }
-        </div>
-      </section>
-
       <!-- Photo Gallery / Ambiance -->
       <section class="gallery">
         <div class="section-header">
@@ -206,33 +185,6 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="gallery-placeholder">
                 <mat-icon>{{ photo.icon }}</mat-icon>
                 <span>{{ photo.label }}</span>
-              </div>
-            </div>
-          }
-        </div>
-      </section>
-
-      <!-- Customer Reviews / Testimonials -->
-      <section class="reviews">
-        <div class="section-header">
-          <h2>What Our Guests Say</h2>
-        </div>
-        <div class="reviews-grid">
-          @for (review of reviews; track review.name) {
-            <div class="review-card">
-              <mat-icon class="quote-icon">format_quote</mat-icon>
-              <p class="review-text">{{ review.text }}</p>
-              <div class="review-stars">
-                @for (s of [1,2,3,4,5]; track s) {
-                  <mat-icon class="star" [class.filled]="s <= review.stars">star</mat-icon>
-                }
-              </div>
-              <div class="reviewer">
-                <div class="reviewer-avatar">{{ review.name.charAt(0) }}</div>
-                <div>
-                  <strong>{{ review.name }}</strong>
-                  <small>{{ review.date }}</small>
-                </div>
               </div>
             </div>
           }
@@ -261,10 +213,14 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
           <div class="footer-col">
             <h4>Quick Links</h4>
-            <a routerLink="/">Home</a>
-            <a routerLink="/menu">Menu</a>
+            <a routerLink="/" [replaceUrl]="true">Home</a>
+            <a routerLink="/menu" [replaceUrl]="true">Menu</a>
             <a (click)="onBookTable()">Reservations</a>
-            <a routerLink="/login">Sign In</a>
+            @if (authService.isAuthenticated()) {
+              <a (click)="goToAccount()">Account</a>
+            } @else {
+              <a routerLink="/login">Sign In</a>
+            }
           </div>
           <div class="footer-col">
             <h4>Contact Us</h4>
@@ -523,6 +479,128 @@ import { AuthService } from '../../core/services/auth.service';
       font-size: 18px;
       width: 18px;
       height: 18px;
+    }
+
+    /* Avatar dropdown */
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px 6px 6px;
+      border: 1px solid #2C2C2C;
+      border-radius: 28px;
+      background: rgba(26, 26, 26, 0.7);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      user-select: none;
+    }
+
+    .nav-user:hover {
+      border-color: #C5A028;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #C5A028;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-avatar mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #0F0F0F;
+    }
+
+    .user-name {
+      color: #F0F0F0;
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chevron {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #A0A0A0;
+      transition: transform 0.2s ease;
+    }
+
+    .chevron.open {
+      transform: rotate(180deg);
+    }
+
+    .user-dropdown-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 199;
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 60px;
+      right: 32px;
+      z-index: 200;
+      background: #1A1A1A;
+      border: 1px solid #2C2C2C;
+      border-radius: 12px;
+      padding: 8px;
+      min-width: 180px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: #F0F0F0;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .dropdown-item:hover {
+      background: #242424;
+    }
+
+    .dropdown-item mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #A0A0A0;
+    }
+
+    .dropdown-item:hover mat-icon {
+      color: #C5A028;
+    }
+
+    .dropdown-item.sign-out:hover {
+      background: rgba(224, 108, 108, 0.1);
+    }
+
+    .dropdown-item.sign-out:hover mat-icon {
+      color: #E06C6C;
+    }
+
+    .dropdown-item.sign-out:hover {
+      color: #E06C6C;
+    }
+
+    .mobile-link.sign-out {
+      color: #E06C6C;
     }
 
     .mobile-menu-btn {
@@ -902,190 +980,6 @@ import { AuthService } from '../../core/services/auth.service';
       height: 16px;
     }
 
-    /* ===== Menu Preview ===== */
-    .menu-preview {
-      padding: 80px 32px;
-      max-width: 960px;
-      margin: 0 auto;
-    }
-
-    .menu-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-
-    .menu-preview-card {
-      background: #1A1A1A;
-      border: 1px solid #2C2C2C;
-      border-radius: 16px;
-      overflow: hidden;
-      display: flex;
-      gap: 16px;
-      transition: all 0.2s ease;
-      cursor: pointer;
-    }
-
-    .menu-preview-card:hover {
-      border-color: #C5A028;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    }
-
-    .menu-img-placeholder {
-      width: 140px;
-      min-height: 140px;
-      flex-shrink: 0;
-      background: linear-gradient(135deg, #242424 0%, #1A1A1A 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .menu-img-placeholder mat-icon {
-      font-size: 36px;
-      width: 36px;
-      height: 36px;
-      color: #333;
-    }
-
-    .menu-preview-info {
-      padding: 18px 18px 18px 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .menu-preview-info h4 {
-      margin: 0;
-      font-size: 17px;
-      font-weight: 600;
-      color: #F0F0F0;
-    }
-
-    .menu-preview-info p {
-      margin: 0;
-      font-size: 13px;
-      color: #A0A0A0;
-      line-height: 1.5;
-    }
-
-    .menu-price {
-      color: #C5A028;
-      font-weight: 700;
-      font-size: 16px;
-    }
-
-    /* ===== Chef's Recommendations ===== */
-    .chef-section {
-      padding: 0 32px 80px;
-      max-width: 960px;
-      margin: 0 auto;
-    }
-
-    .chef-header-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .chef-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: transparent;
-      border: 1px solid #C5A028;
-      border-radius: 16px;
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #C5A028;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .chef-badge mat-icon {
-      font-size: 14px;
-      width: 14px;
-      height: 14px;
-    }
-
-    .chef-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-
-    .chef-card {
-      position: relative;
-      background: #1A1A1A;
-      border: 1px solid #2C2C2C;
-      border-radius: 16px;
-      overflow: hidden;
-      transition: all 0.2s ease;
-      cursor: pointer;
-    }
-
-    .chef-card:hover {
-      border-color: #C5A028;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    }
-
-    .chef-img-placeholder {
-      height: 140px;
-      background: linear-gradient(135deg, #242424 0%, #1A1A1A 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .chef-img-placeholder mat-icon {
-      font-size: 36px;
-      width: 36px;
-      height: 36px;
-      color: #333;
-    }
-
-    .chef-pick-badge-small {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 28px;
-      height: 28px;
-      background: #C5A028;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .chef-pick-badge-small mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-      color: #0F0F0F;
-    }
-
-    .chef-card-info {
-      padding: 16px;
-    }
-
-    .chef-card-info h4 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 600;
-      color: #F0F0F0;
-    }
-
-    .chef-card-info p {
-      margin: 6px 0 10px;
-      font-size: 13px;
-      color: #A0A0A0;
-      line-height: 1.4;
-    }
-
     /* ===== Photo Gallery ===== */
     .gallery {
       padding: 80px 32px;
@@ -1143,96 +1037,6 @@ import { AuthService } from '../../core/services/auth.service';
     .gallery-placeholder span {
       font-size: 12px;
       font-weight: 500;
-    }
-
-    /* ===== Reviews ===== */
-    .reviews {
-      padding: 0 32px 80px;
-      max-width: 960px;
-      margin: 0 auto;
-    }
-
-    .reviews-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-
-    .review-card {
-      background: #1A1A1A;
-      border: 1px solid #2C2C2C;
-      border-radius: 16px;
-      padding: 28px 24px;
-      transition: all 0.2s ease;
-    }
-
-    .review-card:hover {
-      border-color: rgba(197, 160, 40, 0.3);
-    }
-
-    .quote-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
-      color: #C5A028;
-      opacity: 0.6;
-      margin-bottom: 8px;
-    }
-
-    .review-text {
-      margin: 0 0 16px;
-      font-size: 14px;
-      line-height: 1.7;
-      color: #D0D0D0;
-      font-style: italic;
-    }
-
-    .review-stars {
-      display: flex;
-      gap: 2px;
-      margin-bottom: 14px;
-    }
-
-    .star {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: #333;
-    }
-
-    .star.filled {
-      color: #C5A028;
-    }
-
-    .reviewer {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .reviewer-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #242424;
-      border: 1px solid #C5A028;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 16px;
-      color: #C5A028;
-    }
-
-    .reviewer strong {
-      display: block;
-      font-size: 14px;
-      color: #F0F0F0;
-    }
-
-    .reviewer small {
-      font-size: 12px;
-      color: #A0A0A0;
     }
 
     /* ===== CTA Banner ===== */
@@ -1433,19 +1237,6 @@ import { AuthService } from '../../core/services/auth.service';
 export class PublicHomeComponent {
   readonly mobileMenuOpen = signal(false);
 
-  readonly signatureDishes = [
-    { name: 'Truffle Pasta', description: 'Hand-made pappardelle with black truffle and aged parmesan cream', price: '$42', icon: 'lunch_dining' },
-    { name: 'Grilled Salmon', description: 'Atlantic salmon filet, herb-crusted with seasonal vegetables', price: '$38', icon: 'set_meal' },
-    { name: 'Spring Risotto', description: 'Carnaroli rice with fresh herbs, asparagus and parmesan', price: '$32', icon: 'rice_bowl' },
-    { name: 'Wagyu Steak', description: 'A5 grade wagyu, charcoal grilled with red wine reduction', price: '$68', icon: 'restaurant' }
-  ];
-
-  readonly chefPicks = [
-    { name: 'Citrus Ceviche', description: 'Lime-cured sea bass with mango salsa', price: '$24', icon: 'tapas' },
-    { name: 'Chocolate Lava', description: 'Warm molten center with vanilla gelato', price: '$16', icon: 'cake' },
-    { name: 'Lobster Bisque', description: 'Rich & creamy with a hint of cognac', price: '$28', icon: 'ramen_dining' }
-  ];
-
   readonly galleryPhotos = [
     { label: 'Dining Hall', icon: 'chair', size: 'wide' },
     { label: 'Private Room', icon: 'meeting_room', size: '' },
@@ -1455,33 +1246,28 @@ export class PublicHomeComponent {
     { label: 'Wine Cellar', icon: 'wine_bar', size: 'wide' }
   ];
 
-  readonly reviews = [
-    {
-      name: 'Sophie Laurent',
-      text: 'An absolutely magical evening. The truffle pasta was divine, and the service was impeccable. We\'ll be back for our anniversary every year.',
-      stars: 5,
-      date: 'March 2026'
-    },
-    {
-      name: 'James Chen',
-      text: 'The best fine dining experience in the city. Loved the intimate ambiance and the chef\'s attention to detail in every dish.',
-      stars: 5,
-      date: 'February 2026'
-    },
-    {
-      name: 'Maria Garcia',
-      text: 'Booked online and the whole process was seamless. The wagyu steak was cooked to perfection. Highly recommended for special occasions!',
-      stars: 4,
-      date: 'January 2026'
-    }
-  ];
-
-  private readonly authService = inject(AuthService);
+  readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   showLoginPrompt = signal(false);
+  userMenuOpen = signal(false);
 
   scrollTo(id: string): void {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  toggleUserMenu(): void {
+    this.userMenuOpen.set(!this.userMenuOpen());
+  }
+
+  goToAccount(): void {
+    this.userMenuOpen.set(false);
+    this.router.navigate(['/customer/home'], { replaceUrl: true });
+  }
+
+  onSignOut(): void {
+    this.userMenuOpen.set(false);
+    this.authService.logout();
+    this.router.navigate(['/'], { replaceUrl: true });
   }
 
   onBookTable(): void {

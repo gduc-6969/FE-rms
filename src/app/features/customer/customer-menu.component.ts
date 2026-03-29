@@ -66,8 +66,19 @@ const ALL_CATEGORY_ID = -1;
         </div>
       }
 
+      @if (loadError()) {
+        <div class="error-state">
+          <mat-icon>error_outline</mat-icon>
+          <p>Failed to load the menu. Please try again.</p>
+          <button class="retry-btn" (click)="retryLoad()">
+            <mat-icon>refresh</mat-icon>
+            Retry
+          </button>
+        </div>
+      }
+
       <!-- Category Pills with Counts -->
-      @if (!isLoading()) {
+      @if (!isLoading() && !loadError()) {
         <div class="category-pills">
           <!-- "All" pill -->
           <button
@@ -115,7 +126,7 @@ const ALL_CATEGORY_ID = -1;
           @if (displayedItems().length === 0 && !isLoading()) {
             <div class="empty-state">
               <mat-icon>restaurant_menu</mat-icon>
-              <p>Không tìm thấy món ăn phù hợp.</p>
+              <p>No dishes found matching your search.</p>
             </div>
           }
         </section>
@@ -257,6 +268,40 @@ const ALL_CATEGORY_ID = -1;
 
       @keyframes spin {
         to { transform: rotate(360deg); }
+      }
+
+      .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 48px 0;
+        color: #E06C6C;
+      }
+
+      .error-state mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+      }
+
+      .retry-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: 12px;
+        background: #C5A028;
+        border: none;
+        color: #0F0F0F;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .retry-btn:hover {
+        background: #D4AF37;
       }
 
       /* Category Pills */
@@ -470,6 +515,7 @@ export class CustomerMenuComponent implements OnInit {
   categories = signal<CategoryResponse[]>([]);
   allItems = signal<MenuItemResponse[]>([]);
   isLoading = signal(true);
+  loadError = signal(false);
   selectedCategoryId = signal<number>(ALL_CATEGORY_ID);
 
   // Search subject for debounce
@@ -503,6 +549,7 @@ export class CustomerMenuComponent implements OnInit {
 
   private loadData(): void {
     this.isLoading.set(true);
+    this.loadError.set(false);
 
     // Load categories - only show active ones (hoat_dong)
     this.menuService.getCategories().subscribe({
@@ -521,8 +568,13 @@ export class CustomerMenuComponent implements OnInit {
       error: err => {
         console.error('Failed to load menu items', err);
         this.isLoading.set(false);
+        this.loadError.set(true);
       }
     });
+  }
+
+  retryLoad(): void {
+    this.loadData();
   }
 
   selectCategory(id: number): void {

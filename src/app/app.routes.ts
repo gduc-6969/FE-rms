@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, roleGuard } from './core/guards/auth.guards';
+import { authGuard, roleGuard, loginGuard } from './core/guards/auth.guards';
 import { AdminDashboardComponent } from './features/admin/admin-dashboard.component';
 import { DiscountManagementComponent } from './features/admin/discount-management.component';
 import { InventoryManagementComponent } from './features/admin/inventory-management.component';
@@ -9,6 +9,7 @@ import { StaffManagementComponent } from './features/admin/staff-management.comp
 import { TableManagementComponent } from './features/admin/table-management.component';
 import { CustomerHomeComponent } from './features/customer/customer-home.component';
 import { CustomerMenuComponent } from './features/customer/customer-menu.component';
+import { CustomerMyTableComponent } from './features/customer/customer-my-table.component';
 import { CustomerProfileComponent } from './features/customer/customer-profile.component';
 import { CustomerReservationComponent } from './features/customer/customer-reservation.component';
 import { CustomerSecureReservationComponent } from './features/customer/customer-secure-reservation.component';
@@ -25,7 +26,7 @@ import { PublicMenuComponent } from './features/public/public-menu.component';
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', component: PublicHomeComponent },
 	{ path: 'menu', component: PublicMenuComponent },
-	{ path: 'login', component: LoginPageComponent },
+	{ path: 'login', component: LoginPageComponent, canActivate: [loginGuard] },
 	{
 		path: 'admin',
 		component: MainShellComponent,
@@ -66,6 +67,7 @@ export const routes: Routes = [
 			{ path: 'menu', component: CustomerMenuComponent },
 			{ path: 'reservation', component: CustomerReservationComponent },
 			{ path: 'reservation/secure', component: CustomerSecureReservationComponent },
+			{ path: 'my-table', component: CustomerMyTableComponent },
 			{ path: 'profile', component: CustomerProfileComponent }
 		]
 	},
