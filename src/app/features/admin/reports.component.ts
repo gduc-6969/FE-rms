@@ -1,23 +1,46 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   AfterViewInit,
   OnDestroy,
+  OnInit,
   ElementRef,
   ViewChild,
   inject,
-  computed
+  signal,
+  DestroyRef
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MockDataService } from '../../core/services/mock-data.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { forkJoin } from 'rxjs';
+import { ReportService } from '../../core/services/report.service';
+import {
+  ReportSummaryResponse,
+  MonthlyReportResponse,
+  CategoryReportResponse,
+  BestSellerResponse
+} from '../../core/models/report.models';
 
 declare const Chart: any;
 
 @Component({
   selector: 'app-admin-reports',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatSelectModule,
+    MatFormFieldModule,
+    CurrencyPipe,
+    DecimalPipe
+  ],
   template: `
     <section class="rms-page">
 
@@ -28,127 +51,126 @@ declare const Chart: any;
           <p class="page-sub">Analyze restaurant performance</p>
         </div>
         <div class="header-actions">
-          <button class="btn-quarter">
-            <mat-icon>calendar_today</mat-icon>
-            This Quarter
-          </button>
-          <button class="btn-export">
+          <mat-form-field appearance="outline" class="year-select">
+            <mat-label>Year</mat-label>
+            <mat-select [value]="selectedYear()" (selectionChange)="onYearChange($event.value)">
+              @for (year of availableYears; track year) {
+                <mat-option [value]="year">{{ year }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <button class="btn-export" (click)="exportExcel()">
             <mat-icon>download</mat-icon>
             Export
           </button>
         </div>
       </div>
 
-      <!-- Stats Row -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Total Revenue (Q1)</div>
-          <div class="stat-value">\$142,000</div>
-          <div class="stat-trend up">
-            <mat-icon>trending_up</mat-icon> +15%
-          </div>
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="48"></mat-spinner>
+          <span>Loading report data...</span>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Avg Order Value</div>
-          <div class="stat-value">\$74.50</div>
-          <div class="stat-trend up">
-            <mat-icon>trending_up</mat-icon> +8%
+      } @else {
+        <!-- Stats Row -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Revenue ({{ selectedYear() }})</div>
+            <div class="stat-value">{{ summary()?.totalRevenue | currency:'VND':'symbol':'1.0-0' }}</div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Total Orders</div>
-          <div class="stat-value">1,410</div>
-          <div class="stat-trend up">
-            <mat-icon>trending_up</mat-icon> +12%
+          <div class="stat-card">
+            <div class="stat-label">Avg Order Value</div>
+            <div class="stat-value">{{ summary()?.avgOrderValue | currency:'VND':'symbol':'1.0-0' }}</div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Customer Satisfaction</div>
-          <div class="stat-value">4.8/5</div>
-          <div class="stat-trend up">
-            <mat-icon>trending_up</mat-icon> +0.2
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts Row -->
-      <div class="charts-row">
-        <!-- Bar Chart -->
-        <div class="chart-card">
-          <h3 class="chart-title">Monthly Revenue &amp; Orders</h3>
-          <div class="chart-wrap">
-            <canvas #barCanvas></canvas>
-          </div>
-          <div class="chart-legend">
-            <span class="legend-dot" style="background:#ff5f2e"></span> revenue
-            <span class="legend-dot" style="background:#f59e0b; margin-left:14px"></span> orders
+          <div class="stat-card">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value">{{ summary()?.totalOrders | number }}</div>
           </div>
         </div>
 
-        <!-- Pie Chart -->
-        <div class="chart-card">
-          <h3 class="chart-title">Sales by Category</h3>
-          <div class="chart-wrap pie-wrap">
-            <canvas #pieCanvas></canvas>
+        <!-- Charts Row -->
+        <div class="charts-row">
+          <!-- Bar Chart -->
+          <div class="chart-card">
+            <h3 class="chart-title">Monthly Revenue &amp; Orders</h3>
+            <div class="chart-wrap">
+              <canvas #barCanvas></canvas>
+            </div>
+            <div class="chart-legend">
+              <span class="legend-dot" style="background:#ff5f2e"></span> Revenue
+              <span class="legend-dot" style="background:#f59e0b; margin-left:14px"></span> Orders
+            </div>
+          </div>
+
+          <!-- Pie Chart -->
+          <div class="chart-card">
+            <h3 class="chart-title">Sales by Category</h3>
+            <div class="chart-wrap pie-wrap">
+              <canvas #pieCanvas></canvas>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Best-Selling Dishes -->
-      <div class="section-title">Best-Selling Dishes</div>
-      <div class="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Dish</th>
-              <th>Sales</th>
-              <th>Revenue</th>
-              <th>Contribution</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (dish of bestSellers; track dish.rank) {
+        <!-- Best-Selling Dishes -->
+        <div class="section-title">Best-Selling Dishes</div>
+        <div class="table-card">
+          <table>
+            <thead>
               <tr>
-                <td><span class="rank">#{{ dish.rank }}</span></td>
-                <td class="td-name">{{ dish.name }}</td>
-                <td class="td-sales">{{ dish.sales }} orders</td>
-                <td class="td-revenue">\${{ dish.revenue.toLocaleString() }}</td>
-                <td>
-                  <div class="contrib-cell">
-                    <div class="progress-bar">
-                      <div class="progress-fill" [style.width]="dish.pct + '%'"></div>
-                    </div>
-                    <span class="contrib-pct">{{ dish.pct }}%</span>
-                  </div>
-                </td>
+                <th>Rank</th>
+                <th>Dish</th>
+                <th>Sales</th>
+                <th>Revenue</th>
+                <th>Contribution</th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              @for (dish of bestSellers(); track dish.rank) {
+                <tr>
+                  <td><span class="rank">#{{ dish.rank }}</span></td>
+                  <td class="td-name">{{ dish.name }}</td>
+                  <td class="td-sales">{{ dish.sales }} orders</td>
+                  <td class="td-revenue">{{ dish.revenue | currency:'VND':'symbol':'1.0-0' }}</td>
+                  <td>
+                    <div class="contrib-cell">
+                      <div class="progress-bar">
+                        <div class="progress-fill" [style.width]="dish.percentage + '%'"></div>
+                      </div>
+                      <span class="contrib-pct">{{ dish.percentage | number:'1.1-1' }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="no-data">No data available</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
 
-      <!-- Export Cards -->
-      <div class="export-row">
-        <div class="export-card" (click)="exportExcel()">
-          <div class="export-icon">
-            <mat-icon>download</mat-icon>
+        <!-- Export Cards -->
+        <div class="export-row">
+          <div class="export-card" (click)="exportExcel()">
+            <div class="export-icon">
+              <mat-icon>download</mat-icon>
+            </div>
+            <div>
+              <div class="export-title">Export as Excel</div>
+              <div class="export-sub">Download full report (.xlsx)</div>
+            </div>
           </div>
-          <div>
-            <div class="export-title">Export as Excel</div>
-            <div class="export-sub">Download full report (.xlsx)</div>
+          <div class="export-card" (click)="exportPdf()">
+            <div class="export-icon">
+              <mat-icon>download</mat-icon>
+            </div>
+            <div>
+              <div class="export-title">Export as PDF</div>
+              <div class="export-sub">Download printable report (.pdf)</div>
+            </div>
           </div>
         </div>
-        <div class="export-card" (click)="exportPdf()">
-          <div class="export-icon">
-            <mat-icon>download</mat-icon>
-          </div>
-          <div>
-            <div class="export-title">Export as PDF</div>
-            <div class="export-sub">Download printable report (.pdf)</div>
-          </div>
-        </div>
-      </div>
+      }
 
     </section>
   `,
@@ -170,6 +192,12 @@ declare const Chart: any;
       background: var(--bg); min-height: 100%;
     }
 
+    /* ── Loading ── */
+    .loading-container {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; padding: 60px 0; color: var(--muted);
+    }
+
     /* ── Header ── */
     .page-header {
       display: flex; align-items: flex-start; justify-content: space-between;
@@ -178,16 +206,10 @@ declare const Chart: any;
     .page-sub   { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
     .header-actions { display: flex; gap: 10px; align-items: center; }
 
-    .btn-quarter {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; padding: 9px 16px;
-      font-size: 13px; font-weight: 500; cursor: pointer;
-      font-family: inherit; color: var(--text);
-      transition: border-color .15s;
+    .year-select {
+      width: 100px;
     }
-    .btn-quarter mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 1; color: var(--accent); }
-    .btn-quarter:hover { border-color: #d1d5db; }
+    .year-select ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
 
     .btn-export {
       display: inline-flex; align-items: center; gap: 6px;
@@ -279,6 +301,12 @@ declare const Chart: any;
     }
     .contrib-pct { font-size: 12.5px; color: var(--muted); font-weight: 500; min-width: 36px; }
 
+    .no-data {
+      text-align: center;
+      color: var(--muted);
+      padding: 32px !important;
+    }
+
     /* ── Export Cards ── */
     .export-row {
       display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
@@ -310,8 +338,10 @@ declare const Chart: any;
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ReportsComponent implements AfterViewInit, OnDestroy {
-  private readonly mockData = inject(MockDataService);
+export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly reportService = inject(ReportService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('barCanvas') barCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('pieCanvas') pieCanvas!: ElementRef<HTMLCanvasElement>;
@@ -319,24 +349,68 @@ export class ReportsComponent implements AfterViewInit, OnDestroy {
   private barChart: any;
   private pieChart: any;
 
-  readonly bestSellers = [
-    { rank: 1, name: 'Truffle Pasta',  sales: 245, revenue: 6860,  pct: 23.4 },
-    { rank: 2, name: 'Wagyu Steak',    sales: 189, revenue: 12285, pct: 42.0 },
-    { rank: 3, name: 'Grilled Salmon', sales: 167, revenue: 5845,  pct: 20.0 },
-    { rank: 4, name: 'Chocolate Lava', sales: 156, revenue: 1872,  pct: 6.4  },
-    { rank: 5, name: 'Lobster Bisque', sales: 134, revenue: 2412,  pct: 8.2  },
-  ];
+  // State signals
+  readonly loading = signal(true);
+  readonly selectedYear = signal(new Date().getFullYear());
+  readonly summary = signal<ReportSummaryResponse | null>(null);
+  readonly bestSellers = signal<BestSellerResponse[]>([]);
+  readonly monthlyData = signal<MonthlyReportResponse[]>([]);
+  readonly categoryData = signal<CategoryReportResponse[]>([]);
+
+  // Year dropdown options
+  readonly availableYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+
+  ngOnInit(): void {
+    this.loadData();
+  }
 
   ngAfterViewInit(): void {
     this.loadChartJs().then(() => {
-      this.buildBarChart();
-      this.buildPieChart();
+      if (!this.loading()) {
+        this.buildCharts();
+      }
     });
   }
 
   ngOnDestroy(): void {
     this.barChart?.destroy();
     this.pieChart?.destroy();
+  }
+
+  onYearChange(year: number): void {
+    this.selectedYear.set(year);
+    this.loadData();
+  }
+
+  private loadData(): void {
+    this.loading.set(true);
+    const year = this.selectedYear();
+
+    forkJoin({
+      summary: this.reportService.getSummary(year),
+      monthly: this.reportService.getMonthlyReport(year),
+      category: this.reportService.getCategoryReport(year),
+      bestSellers: this.reportService.getBestSellers(year, 5)
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.summary.set(data.summary);
+          this.monthlyData.set(data.monthly || []);
+          this.categoryData.set(data.category || []);
+          this.bestSellers.set(data.bestSellers || []);
+          this.loading.set(false);
+          this.cdr.markForCheck();
+
+          // Rebuild charts after data loaded
+          setTimeout(() => this.buildCharts(), 100);
+        },
+        error: (err) => {
+          console.error('Error loading report data:', err);
+          this.loading.set(false);
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   private loadChartJs(): Promise<void> {
@@ -349,26 +423,46 @@ export class ReportsComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  private buildCharts(): void {
+    this.buildBarChart();
+    this.buildPieChart();
+  }
+
   private buildBarChart(): void {
+    if (!this.barCanvas?.nativeElement) return;
+
+    // Destroy existing chart
+    this.barChart?.destroy();
+
+    const monthlyData = this.monthlyData();
+    if (!monthlyData.length) return;
+
     const ctx = this.barCanvas.nativeElement.getContext('2d')!;
+    const labels = monthlyData.map(m => m.month);
+    const revenues = monthlyData.map(m => m.revenue || 0);
+    const orders = monthlyData.map(m => m.orders || 0);
+
+    const maxRevenue = Math.max(...revenues) * 1.2 || 100000;
+    const maxOrders = Math.max(...orders) * 1.2 || 100;
+
     this.barChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['Jan', 'Feb', 'Mar'],
+        labels,
         datasets: [
           {
-            label: 'revenue',
-            data: [40000, 47000, 50000],
+            label: 'Revenue',
+            data: revenues,
             backgroundColor: '#ff5f2e',
             borderRadius: 6,
-            barThickness: 32
+            barThickness: 24
           },
           {
-            label: 'orders',
-            data: [420, 480, 510],
+            label: 'Orders',
+            data: orders,
             backgroundColor: '#f59e0b',
             borderRadius: 6,
-            barThickness: 32,
+            barThickness: 24,
             yAxisID: 'y2'
           }
         ]
@@ -378,29 +472,50 @@ export class ReportsComponent implements AfterViewInit, OnDestroy {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 12 } } },
+          x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } },
           y: {
             grid: { color: '#f3f4f6' },
-            ticks: { color: '#9ca3af', font: { size: 11 },
-              callback: (v: number) => v >= 1000 ? v / 1000 * 10 + 'k' : v
+            ticks: {
+              color: '#9ca3af',
+              font: { size: 10 },
+              callback: (v: number) => {
+                if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+                if (v >= 1000) return (v / 1000).toFixed(0) + 'K';
+                return v;
+              }
             },
-            min: 0, max: 60000
+            min: 0,
+            max: maxRevenue
           },
-          y2: { display: false, min: 0, max: 700 }
+          y2: { display: false, min: 0, max: maxOrders }
         }
       }
     });
   }
 
   private buildPieChart(): void {
+    if (!this.pieCanvas?.nativeElement) return;
+
+    // Destroy existing chart
+    this.pieChart?.destroy();
+
+    const categoryData = this.categoryData();
+    if (!categoryData.length) return;
+
     const ctx = this.pieCanvas.nativeElement.getContext('2d')!;
+    const labels = categoryData.map(c => c.categoryName);
+    const values = categoryData.map(c => c.percentage || 0);
+
+    // Color palette
+    const colors = ['#ff5f2e', '#f59e0b', '#2dd4bf', '#a3e635', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+
     this.pieChart = new Chart(ctx, {
       type: 'pie',
       data: {
-        labels: ['Mains', 'Appetizers', 'Desserts', 'Drinks'],
+        labels,
         datasets: [{
-          data: [42, 28, 18, 12],
-          backgroundColor: ['#ff5f2e', '#f59e0b', '#2dd4bf', '#a3e635'],
+          data: values,
+          backgroundColor: colors.slice(0, categoryData.length),
           borderWidth: 2,
           borderColor: '#fff'
         }]
@@ -411,7 +526,7 @@ export class ReportsComponent implements AfterViewInit, OnDestroy {
         plugins: {
           legend: {
             position: 'bottom',
-            labels: { color: '#6b7280', font: { size: 12 }, padding: 16 }
+            labels: { color: '#6b7280', font: { size: 11 }, padding: 12 }
           }
         }
       }
