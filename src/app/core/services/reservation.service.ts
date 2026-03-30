@@ -75,4 +75,12 @@ export class ReservationService {
       })
       .pipe(map(res => res.data));
   }
+
+  getReservationById(id: number): Observable<ReservationResponse> {
+    return this.http
+      .get<ApiResponse<ReservationResponse>>(`${this.apiUrl}/reservations/${id}`, {
+        headers: this.authHeaders()
+      })
+      .pipe(map(res => res.data));
+  }
 }
