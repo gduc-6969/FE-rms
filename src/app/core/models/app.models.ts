@@ -101,7 +101,7 @@ export interface PaymentHistoryItem {
   billCode: string;
   tableName: string;
   total: number;
-  method: 'Tiền mặt' | 'Thẻ' | 'Chuyển khoản' | 'Ví điện tử';
+  method: 'Cash' | 'Card' | 'Transfer' | 'E-Wallet';
   paidAt: string;
   staffName: string;
 }

@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { MockDataService } from './mock-data.service';
 
 export interface ReservationTableOption {
@@ -45,6 +45,11 @@ export class CustomerReservationFlowService {
     }))
   );
 
+  /** Pending reservations that staff can act on */
+  readonly pendingReservations = computed(() =>
+    this.myReservations().filter(r => r.status === 'pending')
+  );
+
   constructor(private readonly mockDataService: MockDataService) {}
 
   setDraft(payload: CustomerReservationDraft): void {
@@ -73,6 +78,23 @@ export class CustomerReservationFlowService {
 
     this.myReservations.update(reservations => [...reservations, newReservation]);
     this.clearDraft();
+  }
+
+  acceptReservation(reservationId: number): void {
+    this.myReservations.update(items =>
+      items.map(r => r.id === reservationId ? { ...r, status: 'accepted' as const } : r)
+    );
+  }
+
+  declineReservation(reservationId: number): void {
+    this.myReservations.update(items =>
+      items.map(r => r.id === reservationId ? { ...r, status: 'denied' as const } : r)
+    );
+  }
+
+  /** Get pending reservation for a specific table (by table id) */
+  getPendingForTable(tableId: number): CustomerReservation | undefined {
+    return this.pendingReservations().find(r => r.table.id === tableId);
   }
 
   private hydrateDraft(): CustomerReservationDraft | null {

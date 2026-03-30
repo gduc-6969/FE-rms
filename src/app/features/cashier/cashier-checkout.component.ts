@@ -11,41 +11,41 @@ import { MockDataService } from '../../core/services/mock-data.service';
   imports: [MatCardModule, MatTableModule, MatButtonModule, CurrencyPipe],
   template: `
     <div class="page-header">
-      <h2>Danh sách bàn chờ thanh toán</h2>
-      <button mat-stroked-button>Làm tươi</button>
+      <h2>Pending Payments</h2>
+      <button mat-stroked-button>Refresh</button>
     </div>
 
     <mat-card>
       <mat-card-content>
         <table mat-table [dataSource]="pendingPayments" class="full-width">
           <ng-container matColumnDef="billCode">
-            <th mat-header-cell *matHeaderCellDef>Mã HĐ</th>
+            <th mat-header-cell *matHeaderCellDef>Receipt</th>
             <td mat-cell *matCellDef="let row">{{ row.billCode }}</td>
           </ng-container>
 
           <ng-container matColumnDef="tableName">
-            <th mat-header-cell *matHeaderCellDef>Bàn</th>
+            <th mat-header-cell *matHeaderCellDef>Table</th>
             <td mat-cell *matCellDef="let row">{{ row.tableName }}</td>
           </ng-container>
 
           <ng-container matColumnDef="waitingMinutes">
-            <th mat-header-cell *matHeaderCellDef>Thời gian chờ</th>
-            <td mat-cell *matCellDef="let row">{{ row.waitingMinutes }} phút</td>
+            <th mat-header-cell *matHeaderCellDef>Waiting</th>
+            <td mat-cell *matCellDef="let row">{{ row.waitingMinutes }} min</td>
           </ng-container>
 
           <ng-container matColumnDef="total">
-            <th mat-header-cell *matHeaderCellDef>Tạm tính</th>
+            <th mat-header-cell *matHeaderCellDef>Total</th>
             <td mat-cell *matCellDef="let row">{{ row.total | currency : 'VND' : 'symbol' : '1.0-0' }}</td>
           </ng-container>
 
           <ng-container matColumnDef="waiter">
-            <th mat-header-cell *matHeaderCellDef>Nhân viên</th>
+            <th mat-header-cell *matHeaderCellDef>Staff</th>
             <td mat-cell *matCellDef="let row">{{ row.waiter }}</td>
           </ng-container>
 
           <ng-container matColumnDef="action">
             <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let row"><button mat-flat-button color="primary">Thanh toán</button></td>
+            <td mat-cell *matCellDef="let row"><button mat-flat-button color="primary">Pay</button></td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
