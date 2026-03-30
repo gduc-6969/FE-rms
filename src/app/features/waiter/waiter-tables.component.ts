@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { DiningTable, TableStatus } from '../../core/models/app.models';
 import { TableSessionService } from '../../core/services/table-session.service';
+import { StaffTableService } from '../../core/services/staff-table.service';
 import {
   CustomerReservationFlowService,
   CustomerReservation
@@ -13,22 +15,46 @@ import {
 @Component({
   selector: 'app-waiter-tables',
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule],
   template: `
     <section class="floor-page">
       <!-- Header -->
       <header class="floor-header">
         <div>
           <h2>Table Layout</h2>
-          <p class="subtitle">Manage tables, orders, and reservations.</p>
+          <p class="subtitle">View all tables and their live status from the system.</p>
         </div>
-        <div class="header-stats">
-          <span class="stat stat-open"><span class="dot dot-open"></span>{{ freeCount() }} Open</span>
-          <span class="stat stat-reserved"><span class="dot dot-reserved"></span>{{ occupiedCount() + pendingCount() }} Reserved</span>
-          <span class="stat stat-booked"><span class="dot dot-booked"></span>{{ reservedCount() }} Pending Reservation</span>
-          <span class="stat stat-disabled"><span class="dot dot-disabled"></span>{{ disabledCount() }} Disabled</span>
+        <div class="header-right">
+          <div class="header-stats">
+            <span class="stat stat-open"><span class="dot dot-open"></span>{{ freeCount() }} Open</span>
+            <span class="stat stat-reserved"><span class="dot dot-reserved"></span>{{ bookedCount() }} Reserved</span>
+            <span class="stat stat-serving"><span class="dot dot-serving"></span>{{ servingCount() }} Serving</span>
+            <span class="stat stat-disabled"><span class="dot dot-disabled"></span>{{ disabledCount() }} Maintenance</span>
+          </div>
+          <button class="reload-btn" (click)="loadTables()" [disabled]="isLoading()">
+            <mat-icon [class.spinning]="isLoading()">refresh</mat-icon>
+            Reload
+          </button>
         </div>
       </header>
+
+      <!-- Error Banner -->
+      @if (loadError()) {
+        <div class="error-banner">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ loadError() }}</span>
+          <button (click)="loadTables()">Retry</button>
+        </div>
+      }
+
+      <!-- Loading skeleton -->
+      @if (isLoading()) {
+        <div class="skeleton-grid">
+          @for (i of [1,2,3,4,5,6,7,8]; track i) {
+            <div class="skeleton-table"></div>
+          }
+        </div>
+      }
 
       <!-- Reservation Notification Banner -->
       @if (pendingReservations().length > 0) {
@@ -40,7 +66,8 @@ import {
       }
 
       <!-- Floor Plan -->
-      <div class="floor-plan-wrapper">
+      @if (!isLoading()) {
+        <div class="floor-plan-wrapper">
         <!-- Top row: Restrooms + Bar Area + Kitchen -->
         <div class="fp-top-row">
           <div class="fp-landmark">
@@ -140,11 +167,12 @@ import {
         </div>
 
         <!-- Bottom: Entrance -->
-        <div class="fp-entrance">
-          <mat-icon>door_front</mat-icon>
-          <span>Entrance</span>
+          <div class="fp-entrance">
+            <mat-icon>door_front</mat-icon>
+            <span>Entrance</span>
+          </div>
         </div>
-      </div>
+      }
 
       <!-- ═══ Guest Count Modal ═══ -->
       @if (guestModal()) {
@@ -262,6 +290,7 @@ import {
     .floor-header h2 { margin: 0; font-size: 24px; font-weight: 700; color: #1e293b; }
     .subtitle { margin: 4px 0 0; color: #64748b; font-size: 14px; }
 
+    .header-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
     .header-stats { display: flex; gap: 16px; flex-wrap: wrap; }
     .stat {
       display: flex; align-items: center; gap: 6px;
@@ -269,9 +298,47 @@ import {
     }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .dot-open { background: #22c55e; }
-    .dot-reserved { background: #eab308; }
-    .dot-booked { background: #3b82f6; }
+    .dot-reserved { background: #3b82f6; }
+    .dot-serving { background: #eab308; }
     .dot-disabled { background: #9ca3af; }
+
+    .reload-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 10px; border: 1px solid #e2e8f0;
+      background: #fff; font-size: 13px; font-weight: 600; color: #475569;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .reload-btn:hover { border-color: #ff6a33; color: #ff6a33; }
+    .reload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .reload-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .spinning { animation: spin 1s linear infinite; }
+
+    /* Error Banner */
+    .error-banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; background: #fef2f2;
+      border: 1px solid #fca5a5; border-radius: 14px;
+    }
+    .error-banner mat-icon { color: #dc2626; }
+    .error-banner span { flex: 1; font-size: 14px; color: #dc2626; }
+    .error-banner button {
+      padding: 6px 14px; border-radius: 8px; border: none;
+      background: #dc2626; color: #fff; font-size: 13px; cursor: pointer;
+    }
+
+    /* Skeleton */
+    .skeleton-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;
+      padding: 20px; background: #f1f5f9; border-radius: 20px;
+    }
+    .skeleton-table {
+      height: 100px; border-radius: 14px;
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     /* Reservation Banner */
     .reservation-banner {
@@ -357,16 +424,28 @@ import {
     .fp-table.status-available mat-icon { color: #22c55e; }
     .fp-table.status-available:hover { background: #f0fdf4; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(34,197,94,0.15); }
 
-    .fp-table.status-serving { border-color: #eab308; background: #fefce8; }
-    .fp-table.status-serving mat-icon { color: #eab308; }
-    .fp-table.status-serving:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(234,179,8,0.15); }
+    /* da_dat = Đã đặt (blue/booked) */
+    .fp-table.status-da_dat { border-color: #3b82f6; background: #eff6ff; }
+    .fp-table.status-da_dat mat-icon { color: #3b82f6; }
+    .fp-table.status-da_dat:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.15); }
+
+    /* dang_phuc_vu = Đang phục vụ (yellow) */
+    .fp-table.status-serving,
+    .fp-table.status-dang_phuc_vu { border-color: #eab308; background: #fefce8; }
+    .fp-table.status-serving mat-icon,
+    .fp-table.status-dang_phuc_vu mat-icon { color: #eab308; }
+    .fp-table.status-serving:hover,
+    .fp-table.status-dang_phuc_vu:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(234,179,8,0.15); }
 
     .fp-table.status-pending-payment { border-color: #eab308; background: #fefce8; }
     .fp-table.status-pending-payment mat-icon { color: #eab308; }
     .fp-table.status-pending-payment:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(234,179,8,0.15); }
 
-    .fp-table.status-disabled { border-color: #9ca3af; background: #f3f4f6; opacity: 0.55; cursor: not-allowed; }
-    .fp-table.status-disabled mat-icon { color: #9ca3af; }
+    /* bao_tri = Bảo trì (grey) */
+    .fp-table.status-disabled,
+    .fp-table.status-bao_tri { border-color: #9ca3af; background: #f3f4f6; opacity: 0.55; cursor: not-allowed; }
+    .fp-table.status-disabled mat-icon,
+    .fp-table.status-bao_tri mat-icon { color: #9ca3af; }
 
     .fp-table.has-reservation { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
     .reservation-dot {
@@ -492,12 +571,22 @@ import {
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WaiterTablesComponent {
+export class WaiterTablesComponent implements OnInit {
   private readonly tableSessionService = inject(TableSessionService);
+  private readonly staffTableService = inject(StaffTableService);
   private readonly reservationFlow = inject(CustomerReservationFlowService);
   private readonly router = inject(Router);
 
-  readonly tables = this.tableSessionService.tables;
+  // Live tables from API (overrides mock)
+  readonly apiTables = signal<(DiningTable & { _rawStatus: string })[]>([]);
+  readonly isLoading = signal(true);
+  readonly loadError = signal<string | null>(null);
+
+  // Merge: prefer API tables if loaded, fallback to mock
+  readonly tables = computed(() =>
+    this.apiTables().length > 0 ? this.apiTables() : this.tableSessionService.tables()
+  );
+
   readonly guestModal = signal<DiningTable | null>(null);
   readonly guestCount = signal(2);
   readonly reservationModal = signal<CustomerReservation | null>(null);
@@ -506,11 +595,23 @@ export class WaiterTablesComponent {
 
   readonly pendingReservations = this.reservationFlow.pendingReservations;
 
-  readonly freeCount = computed(() => this.tables().filter(t => t.status === 'available').length);
+  readonly freeCount = computed(() =>
+    this.apiTables().filter(t => (t as any)._rawStatus === 'trong').length
+  );
+  readonly bookedCount = computed(() =>
+    this.apiTables().filter(t => (t as any)._rawStatus === 'da_dat').length
+  );
+  readonly servingCount = computed(() =>
+    this.apiTables().filter(t => (t as any)._rawStatus === 'dang_phuc_vu').length
+  );
+  readonly disabledCount = computed(() =>
+    this.apiTables().filter(t => (t as any)._rawStatus === 'bao_tri').length
+  );
+  readonly reservedCount = computed(() => this.pendingReservations().length);
+
+  // legacy mock counts (used when API not loaded)
   readonly occupiedCount = computed(() => this.tables().filter(t => t.status === 'serving').length);
   readonly pendingCount = computed(() => this.tables().filter(t => t.status === 'pending-payment').length);
-  readonly disabledCount = computed(() => this.tables().filter(t => t.status === 'disabled').length);
-  readonly reservedCount = computed(() => this.pendingReservations().length);
 
   /** Guest options: 1 to min(10, table capacity) */
   readonly guestOptions = computed(() => {
@@ -518,9 +619,9 @@ export class WaiterTablesComponent {
     return Array.from({ length: cap }, (_, i) => i + 1);
   });
 
-  /** Group tables by capacity into zones — identical to customer screen */
+  /** Group tables by capacity into zones */
   readonly zones = computed(() => {
-    const tables = this.tables();
+    const tables = this.apiTables().length > 0 ? this.apiTables() : this.tableSessionService.tables();
     return {
       bar: tables.filter(t => t.capacity <= 2),
       dining: tables.filter(t => t.capacity >= 3 && t.capacity <= 4),
@@ -528,6 +629,26 @@ export class WaiterTablesComponent {
       communal: tables.filter(t => t.capacity >= 7)
     };
   });
+
+  ngOnInit(): void {
+    this.loadTables();
+  }
+
+  loadTables(): void {
+    this.isLoading.set(true);
+    this.loadError.set(null);
+    this.staffTableService.getAllTablesForStaff().subscribe({
+      next: tables => {
+        this.apiTables.set(tables);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        this.loadError.set('Không thể tải danh sách bàn. Vui lòng thử lại.');
+        this.isLoading.set(false);
+        console.error('StaffTableService error:', err);
+      }
+    });
+  }
 
   handleTableClick(table: DiningTable): void {
     if (table.status === 'disabled') return;
@@ -590,15 +711,23 @@ export class WaiterTablesComponent {
     return !!this.reservationFlow.getPendingForTable(tableId);
   }
 
-  /** Build class string — avoids [class] wiping base classes */
+  /** Build class string using rawStatus when available for accurate styling */
   statusClass(table: DiningTable): string {
+    const raw = (table as any)._rawStatus;
+    if (raw) return 'status-' + raw;
     return 'status-' + table.status;
   }
 
-  statusLabel(status: TableStatus): string {
-    if (status === 'available') return 'Open';
-    if (status === 'serving') return 'Reserved';
-    if (status === 'pending-payment') return 'Reserved';
-    return 'Disabled';
+  statusLabel(status: TableStatus | string): string {
+    // Handle backend enum values
+    if (status === 'trong') return 'Trống';
+    if (status === 'da_dat') return 'Đã đặt';
+    if (status === 'dang_phuc_vu') return 'Đang phục vụ';
+    if (status === 'bao_tri') return 'Bảo trì';
+    // Handle frontend values
+    if (status === 'available') return 'Trống';
+    if (status === 'serving') return 'Phục vụ';
+    if (status === 'pending-payment') return 'Chờ thanh toán';
+    return 'Vô hiệu';
   }
 }
