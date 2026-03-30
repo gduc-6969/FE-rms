@@ -81,7 +81,7 @@ interface NavItem {
 
         <nav class="staff-nav">
           @for (item of navItems(); track item.path) {
-            <a [routerLink]="item.path" routerLinkActive="staff-active-link" class="staff-link">
+            <a [routerLink]="item.path" [replaceUrl]="true" routerLinkActive="staff-active-link" class="staff-link">
               <mat-icon>{{ item.icon }}</mat-icon>
               <span>{{ item.label }}</span>
             </a>

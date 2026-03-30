@@ -263,8 +263,8 @@ export class CustomerSecureReservationComponent {
       return;
     }
 
-    this.snackBar.open('✅ Reservation request submitted (mock)!', 'Close', { duration: 2500 });
-    this.reservationFlow.clearDraft();
+    this.reservationFlow.submitReservation();
+    this.snackBar.open('✅ Reservation request submitted!', 'Close', { duration: 2500 });
     this.router.navigateByUrl('/customer/home');
   }
 }
