@@ -1073,7 +1073,6 @@ export class CustomerReservationComponent implements OnInit {
 
     this.reservationService.createReservation(payload).subscribe({
       next: (res) => {
-        // Lưu ID của reservation vừa tạo vào localStorage định danh theo user
         try {
           const key = `rms-my-reservation-ids-${customerId}`;
           const idsJson = localStorage.getItem(key);

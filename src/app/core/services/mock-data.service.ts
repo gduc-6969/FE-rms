@@ -27,11 +27,11 @@ export class MockDataService {
 
   getDiningTables(): DiningTable[] {
     return [
-      { id: 1, name: 'Bàn 01', capacity: 4, area: 'Tầng 1', status: 'available' },
-      { id: 2, name: 'Bàn 02', capacity: 6, area: 'Tầng 1', status: 'serving', guests: 5, elapsedMinutes: 78 },
-      { id: 3, name: 'Bàn 03', capacity: 4, area: 'VIP', status: 'pending-payment', guests: 4, elapsedMinutes: 102 },
-      { id: 4, name: 'Bàn 04', capacity: 2, area: 'Ban công', status: 'disabled' },
-      { id: 5, name: 'Bàn 05', capacity: 8, area: 'Tầng 2', status: 'serving', guests: 7, elapsedMinutes: 46 }
+      { id: 1, name: 'T01', capacity: 4, area: 'Main Dining', status: 'available' },
+      { id: 2, name: 'T02', capacity: 6, area: 'Booth', status: 'serving', guests: 5, elapsedMinutes: 78 },
+      { id: 3, name: 'T03', capacity: 4, area: 'Main Dining', status: 'pending-payment', guests: 4, elapsedMinutes: 102 },
+      { id: 4, name: 'T04', capacity: 2, area: 'Bar', status: 'disabled' },
+      { id: 5, name: 'T05', capacity: 8, area: 'Communal', status: 'serving', guests: 7, elapsedMinutes: 46 }
     ];
   }
 
@@ -111,7 +111,7 @@ export class MockDataService {
         billCode: 'HD-240290',
         tableName: 'Bàn 06',
         total: 980000,
-        method: 'Thẻ',
+        method: 'Card',
         paidAt: '2026-03-25 11:25',
         staffName: 'Trần Anh'
       },
@@ -119,7 +119,7 @@ export class MockDataService {
         billCode: 'HD-240291',
         tableName: 'Bàn 02',
         total: 1245000,
-        method: 'Tiền mặt',
+        method: 'Cash',
         paidAt: '2026-03-25 12:10',
         staffName: 'Nguyễn Bình'
       },
@@ -127,7 +127,7 @@ export class MockDataService {
         billCode: 'HD-240292',
         tableName: 'Bàn 09',
         total: 730000,
-        method: 'Chuyển khoản',
+        method: 'Transfer',
         paidAt: '2026-03-25 13:42',
         staffName: 'Lê Phương'
       }

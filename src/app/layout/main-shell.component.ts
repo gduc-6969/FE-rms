@@ -70,8 +70,8 @@ interface NavItem {
       <section class="staff-shell">
         <header class="staff-topbar">
           <div class="staff-brand">
-            <span class="staff-brand-icon"><mat-icon>bar_chart</mat-icon></span>
-            <strong>Gastros</strong>
+            <img class="staff-logo-image" src="/assets/logo.jpg" alt="Desinare logo" />
+            <strong>Desinare</strong>
           </div>
 
           <button mat-icon-button (click)="logout()" aria-label="logout">
@@ -81,7 +81,7 @@ interface NavItem {
 
         <nav class="staff-nav">
           @for (item of navItems(); track item.path) {
-            <a [routerLink]="item.path" routerLinkActive="staff-active-link" class="staff-link">
+            <a [routerLink]="item.path" [replaceUrl]="true" routerLinkActive="staff-active-link" class="staff-link">
               <mat-icon>{{ item.icon }}</mat-icon>
               <span>{{ item.label }}</span>
             </a>
@@ -232,14 +232,11 @@ interface NavItem {
         font-weight: 700;
       }
 
-      .staff-brand-icon {
+      .staff-logo-image {
         width: 36px;
         height: 36px;
-        border-radius: 12px;
-        background: #ff6a33;
-        color: white;
-        display: grid;
-        place-items: center;
+        object-fit: contain;
+        border-radius: 8px;
       }
 
       .staff-nav {
@@ -457,16 +454,15 @@ export class MainShellComponent {
   readonly navByRole: Record<UserRole, NavItem[]> = {
     admin: [
       { label: 'Dashboard', icon: 'space_dashboard', path: '/admin/dashboard' },
-      { label: 'Quản lý thực đơn', icon: 'restaurant_menu', path: '/admin/menu' },
-      { label: 'Quản lý bàn', icon: 'table_restaurant', path: '/admin/tables' },
-      { label: 'Quản lý kho', icon: 'inventory_2', path: '/admin/inventory' },
-      { label: 'Quản lý nhân viên', icon: 'groups', path: '/admin/staff' },
+      { label: 'Menu Management', icon: 'restaurant_menu', path: '/admin/menu' },
+      { label: 'Table Management', icon: 'table_restaurant', path: '/admin/tables' },
+      { label: 'Inventory', icon: 'inventory_2', path: '/admin/inventory' },
+      { label: 'Staff Management', icon: 'groups', path: '/admin/staff' },
       { label: 'Reports', icon: 'analytics', path: '/admin/reports' }
     ],
     staff: [
-      { label: 'Bàn & Thanh toán', icon: 'table_bar', path: '/staff/tables' },
-      { label: 'Lịch sử thanh toán', icon: 'receipt_long', path: '/staff/payment-history' },
-      { label: 'Shift', icon: 'schedule', path: '/staff/shift' }
+      { label: 'Tables & Checkout', icon: 'table_bar', path: '/staff/tables' },
+      { label: 'Payment History', icon: 'receipt_long', path: '/staff/payment-history' }
     ],
     customer: [
       { label: 'Home', icon: 'home', path: '/customer/home' },
@@ -485,11 +481,11 @@ export class MainShellComponent {
     const role = this.role();
     const labels: Record<UserRole, string> = {
       admin: 'Manager/Admin',
-      staff: 'Nhân viên (Phục vụ + Thu ngân)',
-      customer: 'Khách hàng'
+      staff: 'Staff (Waiter + Cashier)',
+      customer: 'Customer'
     };
 
-    return role ? labels[role] : 'Người dùng';
+    return role ? labels[role] : 'User';
   });
 
   constructor(

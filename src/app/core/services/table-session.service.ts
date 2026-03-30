@@ -208,6 +208,30 @@ export class TableSessionService {
     return Math.round(this.getBillTotal(session) * taxRate);
   }
 
+  updateOrderQuantity(tableId: number, orderId: number, newQuantity: number): void {
+    this.sessions.update(items =>
+      items.map(session => {
+        if (session.tableId !== tableId || session.status !== 'open') return session;
+        if (newQuantity <= 0) {
+          return { ...session, orders: session.orders.filter(o => o.id !== orderId) };
+        }
+        return {
+          ...session,
+          orders: session.orders.map(o => o.id === orderId ? { ...o, quantity: newQuantity } : o)
+        };
+      })
+    );
+  }
+
+  removeOrder(tableId: number, orderId: number): void {
+    this.sessions.update(items =>
+      items.map(session => {
+        if (session.tableId !== tableId || session.status !== 'open') return session;
+        return { ...session, orders: session.orders.filter(o => o.id !== orderId) };
+      })
+    );
+  }
+
   openShift(): void {
     this.isShiftOpen.set(true);
     this.shiftStartedAt.set(new Date());
