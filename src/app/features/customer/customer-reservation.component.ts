@@ -104,20 +104,27 @@ const SERVICE_SESSIONS = {
           <mat-card-content>
             <h3 class="card-title">Choose your table</h3>
 
-            <!-- Capacity filter -->
-            <div class="capacity-filter-row">
-              <span class="section-label">Filter by capacity (min. guests):</span>
-              <div class="cap-chips">
-                @for (opt of capacityOptions; track opt) {
-                  <button
-                    type="button"
-                    class="filter-chip"
-                    [class.active]="minCapacity() === opt"
-                    (click)="minCapacity.set(opt)">
-                    {{ opt }}+
-                  </button>
-                }
+            <!-- Number of Guests -->
+            <div class="guests-row">
+              <label class="section-label">How many guests?</label>
+              <div class="guest-stepper">
+                <button
+                  type="button"
+                  class="stepper-btn"
+                  [disabled]="numberOfGuests() <= 1"
+                  (click)="changeGuests(numberOfGuests() - 1)">
+                  <mat-icon>remove</mat-icon>
+                </button>
+                <span class="guest-count">{{ numberOfGuests() }} guests</span>
+                <button
+                  type="button"
+                  class="stepper-btn"
+                  [disabled]="numberOfGuests() >= 10"
+                  (click)="changeGuests(numberOfGuests() + 1)">
+                  <mat-icon>add</mat-icon>
+                </button>
               </div>
+              <span class="section-label" style="margin-top:6px">Showing tables for {{ numberOfGuests() }}–{{ numberOfGuests() + 2 }} seats</span>
             </div>
 
             <!-- Status legend -->
@@ -278,7 +285,7 @@ const SERVICE_SESSIONS = {
             @if (selectedTable()) {
               <div class="selected-recap">
                 <mat-icon>table_restaurant</mat-icon>
-                <span>{{ selectedTable()!.tableCode }} · {{ selectedTable()!.capacity }} guests · max {{ durationLabel() }}</span>
+                <span>{{ selectedTable()!.tableCode }} ({{ selectedTable()!.capacity }} seats) · {{ numberOfGuests() }} guests · max {{ durationLabel() }}</span>
               </div>
             }
 
@@ -342,28 +349,6 @@ const SERVICE_SESSIONS = {
                   {{ slot.label }}
                 </button>
               }
-            </div>
-
-            <!-- Number of guests -->
-            <div class="guests-row">
-              <label class="section-label">Number of Guests</label>
-              <div class="guest-stepper">
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  [disabled]="numberOfGuests() <= 2"
-                  (click)="numberOfGuests.set(numberOfGuests() - 1)">
-                  <mat-icon>remove</mat-icon>
-                </button>
-                <span class="guest-count">{{ numberOfGuests() }} guests</span>
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  [disabled]="numberOfGuests() >= (selectedTable()?.capacity ?? 2)"
-                  (click)="numberOfGuests.set(numberOfGuests() + 1)">
-                  <mat-icon>add</mat-icon>
-                </button>
-              </div>
             </div>
 
             <!-- Note -->
@@ -531,18 +516,6 @@ const SERVICE_SESSIONS = {
       color: #F0F0F0;
       font-weight: 600;
       text-align: center;
-    }
-
-    /* Capacity filter */
-    .capacity-filter-row {
-      margin-bottom: 16px;
-    }
-
-    .cap-chips {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 8px;
     }
 
     /* Legend */
@@ -911,14 +884,11 @@ export class CustomerReservationComponent implements OnInit {
   selectedTableId = signal<number | null>(null);
   selectedTable = signal<TableResponse | null>(null);
 
-  minCapacity = signal<number>(2);
   selectedDate = signal<string>('');
   selectedTime = signal<string>('');
   numberOfGuests = signal<number>(2);
   activeShift = signal<'morning' | 'evening'>('morning');
   note = '';
-
-  readonly capacityOptions = [2, 4, 6, 8, 10];
 
   readonly steps = [
     { id: 'table', label: 'Select Table' },
@@ -930,8 +900,8 @@ export class CustomerReservationComponent implements OnInit {
   // ── Computed ──
 
   readonly filteredTables = computed(() => {
-    const min = this.minCapacity();
-    return this.allTables().filter(t => t.capacity >= min);
+    const guests = this.numberOfGuests();
+    return this.allTables().filter(t => t.capacity >= guests && t.capacity <= guests + 2);
   });
 
   readonly zones = computed(() => {
@@ -1037,10 +1007,13 @@ export class CustomerReservationComponent implements OnInit {
     if (table.status !== 'trong') return;
     this.selectedTableId.set(table.id);
     this.selectedTable.set(table);
-    // Ensure guests don't exceed capacity
-    if (this.numberOfGuests() > table.capacity) {
-      this.numberOfGuests.set(table.capacity);
-    }
+  }
+
+  changeGuests(value: number): void {
+    this.numberOfGuests.set(value);
+    // Clear selected table since filter range has changed
+    this.selectedTableId.set(null);
+    this.selectedTable.set(null);
   }
 
   // ── Date helpers ──
