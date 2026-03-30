@@ -17,6 +17,7 @@ import { LoginPageComponent } from './features/auth/login-page.component';
 import { StaffPaymentHistoryComponent } from './features/staff/staff-payment-history.component';
 import { StaffShiftComponent } from './features/staff/staff-shift.component';
 import { StaffTableWorkspaceComponent } from './features/staff/staff-table-workspace.component';
+import { StaffReservationsComponent } from './features/staff/staff-reservations.component';
 import { WaiterTablesComponent } from './features/waiter/waiter-tables.component';
 import { MainShellComponent } from './layout/main-shell.component';
 import { PublicHomeComponent } from './features/public/public-home.component';
@@ -51,6 +52,7 @@ export const routes: Routes = [
 			{ path: 'tables/:tableId', component: StaffTableWorkspaceComponent },
 			{ path: 'checkout', pathMatch: 'full', redirectTo: 'tables' },
 			{ path: 'payment-history', component: StaffPaymentHistoryComponent },
+			{ path: 'reservations', component: StaffReservationsComponent },
 			{ path: 'shift', component: StaffShiftComponent }
 		]
 	},

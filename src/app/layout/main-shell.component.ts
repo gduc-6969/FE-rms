@@ -462,6 +462,7 @@ export class MainShellComponent {
     ],
     staff: [
       { label: 'Tables & Checkout', icon: 'table_bar', path: '/staff/tables' },
+      { label: 'Reservation', icon: 'event_seat', path: '/staff/reservations' },
       { label: 'Payment History', icon: 'receipt_long', path: '/staff/payment-history' }
     ],
     customer: [

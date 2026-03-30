@@ -83,4 +83,36 @@ export class ReservationService {
       })
       .pipe(map(res => res.data));
   }
+
+  /** Fetch all reservations with status cho_xac_nhan (pending) */
+  getPendingReservations(): Observable<ReservationResponse[]> {
+    return this.http
+      .get<ApiResponse<ReservationResponse[]>>(
+        `${this.apiUrl}/reservations/status/cho_xac_nhan`,
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(res => res.data));
+  }
+
+  /** Accept a reservation */
+  acceptReservation(id: number): Observable<ReservationResponse> {
+    return this.http
+      .put<ApiResponse<ReservationResponse>>(
+        `${this.apiUrl}/reservations/${id}/status`,
+        { status: 'da_xac_nhan' },
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(res => res.data));
+  }
+
+  /** Decline a reservation */
+  declineReservation(id: number): Observable<ReservationResponse> {
+    return this.http
+      .put<ApiResponse<ReservationResponse>>(
+        `${this.apiUrl}/reservations/${id}/status`,
+        { status: 'da_huy' },
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(res => res.data));
+  }
 }
