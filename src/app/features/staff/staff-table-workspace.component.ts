@@ -115,10 +115,7 @@ import { TableSessionService } from '../../core/services/table-session.service';
 
             <!-- Action Buttons -->
             <div class="bill-actions">
-              <button class="action-secondary" (click)="sendKitchen()">
-                <mat-icon>kitchen</mat-icon> Send to Kitchen
-              </button>
-              <button class="action-primary" [disabled]="currentSession.orders.length === 0" (click)="openCheckoutPopup()">
+              <button class="action-primary" style="width:100%;max-width:320px" [disabled]="currentSession.orders.length === 0" (click)="openCheckoutPopup()">
                 <mat-icon>point_of_sale</mat-icon> Checkout
               </button>
             </div>
@@ -361,7 +358,7 @@ import { TableSessionService } from '../../core/services/table-session.service';
 
     /* ─── Actions ─── */
     .bill-actions {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      display: flex; justify-content: center; gap: 10px;
       padding: 14px 20px;
     }
     .action-secondary, .action-primary {
