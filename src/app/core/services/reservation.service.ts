@@ -94,25 +94,69 @@ export class ReservationService {
       .pipe(map(res => res.data));
   }
 
-  /** Accept a reservation */
+  /** Accept a reservation → da_xac_nhan */
   acceptReservation(id: number): Observable<ReservationResponse> {
     return this.http
-      .put<ApiResponse<ReservationResponse>>(
-        `${this.apiUrl}/reservations/${id}/status`,
-        { status: 'da_xac_nhan' },
+      .patch<ApiResponse<ReservationResponse>>(
+        `${this.apiUrl}/reservations/${id}/status?status=da_xac_nhan`,
+        {},
         { headers: this.authHeaders() }
       )
       .pipe(map(res => res.data));
   }
 
-  /** Decline a reservation */
-  declineReservation(id: number): Observable<ReservationResponse> {
+  /** Decline a reservation → da_huy (with note via PUT) */
+  declineReservation(id: number, note?: string): Observable<ReservationResponse> {
     return this.http
-      .put<ApiResponse<ReservationResponse>>(
-        `${this.apiUrl}/reservations/${id}/status`,
-        { status: 'da_huy' },
+      .patch<ApiResponse<ReservationResponse>>(
+        `${this.apiUrl}/reservations/${id}/status?status=da_huy`,
+        {},
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(res => res.data));
+  }
+
+  /** Mark customer arrived → khach_den */
+  markArrived(id: number): Observable<ReservationResponse> {
+    return this.http
+      .patch<ApiResponse<ReservationResponse>>(
+        `${this.apiUrl}/reservations/${id}/status?status=khach_den`,
+        {},
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(res => res.data));
+  }
+
+  /** Mark customer no-show → khach_khong_den */
+  markNoShow(id: number): Observable<ReservationResponse> {
+    return this.http
+      .patch<ApiResponse<ReservationResponse>>(
+        `${this.apiUrl}/reservations/${id}/status?status=khach_khong_den`,
+        {},
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(res => res.data));
+  }
+
+  /** Fetch all confirmed reservations (da_xac_nhan) */
+  getConfirmedReservations(): Observable<ReservationResponse[]> {
+    return this.http
+      .get<ApiResponse<ReservationResponse[]>>(
+        `${this.apiUrl}/reservations/status/da_xac_nhan`,
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(res => res.data));
+  }
+
+  /** Update table status via PATCH /api/v1/tables/{id}/status */
+  updateTableStatus(tableId: number, status: string): Observable<any> {
+    return this.http
+      .patch<ApiResponse<any>>(
+        `${this.apiUrl}/tables/${tableId}/status?status=${status}`,
+        {},
         { headers: this.authHeaders() }
       )
       .pipe(map(res => res.data));
   }
 }
+
