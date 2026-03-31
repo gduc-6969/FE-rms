@@ -162,7 +162,6 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
               @if (discount() > 0) {
                 <div class="total-row discount-row"><span>Discount</span><span>-{{ discount() | currency : 'USD' : 'symbol' : '1.2-2' }}</span></div>
               }
-              <div class="total-row"><span>Tax (10%)</span><span>{{ tax() | currency : 'USD' : 'symbol' : '1.2-2' }}</span></div>
               <div class="total-row grand"><span>Total</span><span>{{ grandTotal() | currency : 'USD' : 'symbol' : '1.2-2' }}</span></div>
             </div>
 
@@ -558,8 +557,7 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
     this.cart().reduce((sum, i) => sum + i.price * i.quantity, 0)
   );
   readonly discount = computed(() => Math.max(0, Number(this.discountAmount()) || 0));
-  readonly tax = computed(() => Math.round((this.subtotal() - this.discount()) * 0.1));
-  readonly grandTotal = computed(() => Math.max(0, this.subtotal() - this.discount() + this.tax()));
+  readonly grandTotal = computed(() => Math.max(0, this.subtotal() - this.discount()));
 
   readonly canConfirmPayment = computed(() => {
     return true;
@@ -711,18 +709,11 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
       next: (invoice) => {
         const realSubtotal = invoice.subtotal;  // tam_tinh từ backend
         const discount = this.discount();
-        const taxAmount = Math.round((realSubtotal - discount) * 0.1);  // Tính tax dựa trên subtotal thực
-        const correctTotal = realSubtotal - discount + taxAmount;  // Total chính xác
+        const correctTotal = Math.max(0, realSubtotal - discount);
+        const discountReason = this.discountReason() || `Discount: ${discount}`;
         
-        // Workaround: Backend không có field tax, nên ta phải:
-        // adjustedDiscount = discount - tax để backend tính: tong_tien = subtotal - (discount - tax) = subtotal - discount + tax
-        const adjustedDiscount = discount - taxAmount;
-        const discountReason = discount > 0 
-          ? (this.discountReason() || `Discount: ${discount}, Tax: ${taxAmount}`)
-          : `Tax 10%: ${taxAmount}`;
-        
-        // Update invoice with adjusted discount that includes tax calculation
-        this.api.updateInvoiceDiscount(invId, tableId, adjustedDiscount, discountReason).subscribe({
+        // Update invoice with discount
+        this.api.updateInvoiceDiscount(invId, tableId, discount, discount > 0 ? discountReason : '').subscribe({
           next: () => {
             // Step 3: Create payment with correct total
             this.api.createPayment(
