@@ -27,7 +27,9 @@ export class StaffService {
   getAllStaff(page = 0, size = 10): Observable<PageResponse<UserResponse>> {    
     const params = new HttpParams()
       .set('page', page)
-      .set('size', size);
+      .set('size', size)
+      .set('sortBy', 'id')
+      .set('sortDir', 'desc');
     return this.http
       .get<ApiResponse<PageResponse<UserResponse>>>(`${this.baseUrl}/page`, { params })
       .pipe(map(res => res.data));

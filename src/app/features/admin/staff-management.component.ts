@@ -13,6 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Role, UserResponse, UserStatus } from '../../core/models/user.models';
 import { StaffService } from '../../core/services/staff.service';
 
@@ -29,7 +30,8 @@ import { StaffService } from '../../core/services/staff.service';
     MatFormFieldModule,
     MatSelectModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatPaginatorModule
   ],
   template: `
     <section class="rms-page">
@@ -194,6 +196,15 @@ import { StaffService } from '../../core/services/staff.service';
             @if (items().length === 0) {
               <div class="no-data">No staff members yet. Click "Add Staff" to create one.</div>
             }
+
+            <mat-paginator
+              [length]="totalElements()"
+              [pageSize]="pageSize()"
+              [pageIndex]="currentPage()"
+              [pageSizeOptions]="[5, 10, 20, 50]"
+              (page)="onPageChange($event)"
+              showFirstLastButtons>
+            </mat-paginator>
           }
         </mat-card-content>
       </mat-card>
@@ -236,10 +247,16 @@ export class StaffManagementComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
 
+  private allStaff: UserResponse[] = [];
   readonly items = signal<UserResponse[]>([]);
   readonly editingId = signal<number | null>(null);
   readonly isCreating = signal(false);
   readonly loading = signal(false);
+
+  // Pagination
+  readonly currentPage = signal(0);
+  readonly pageSize = signal(10);
+  readonly totalElements = signal(0);
 
   readonly displayedColumns = ['fullName', 'username', 'role', 'email', 'phone', 'status', 'actions'];
 
@@ -278,15 +295,17 @@ export class StaffManagementComponent implements OnInit {
 
   private loadUsers(): void {
     this.loading.set(true);
-    this.staffService.getAllStaff()
+    // Load all users with large page size
+    this.staffService.getAllStaff(0, 1000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: page => {
-          // Lọc bỏ khách hàng và nhân viên đã nghỉ
-          const staff = page.content.filter(u =>
+          // Filter out customers and inactive staff
+          this.allStaff = page.content.filter(u =>
             u.role !== 'KHACH_HANG' && u.status !== 'ngung_hoat_dong'
           );
-          this.items.set(staff);
+          this.totalElements.set(this.allStaff.length);
+          this.updateDisplayedItems();
           this.loading.set(false);
         },
         error: () => {
@@ -294,6 +313,18 @@ export class StaffManagementComponent implements OnInit {
           this.loading.set(false);
         }
       });
+  }
+
+  private updateDisplayedItems(): void {
+    const start = this.currentPage() * this.pageSize();
+    const end = start + this.pageSize();
+    this.items.set(this.allStaff.slice(start, end));
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.currentPage.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.updateDisplayedItems();
   }
 
   startCreate(): void {
@@ -323,7 +354,9 @@ export class StaffManagementComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: newUser => {
-          this.items.update(list => [...list, newUser]);
+          this.allStaff.unshift(newUser);
+          this.totalElements.set(this.allStaff.length);
+          this.updateDisplayedItems();
           this.cancelCreate();
           this.loading.set(false);
           this.showSuccess('Staff created successfully');
@@ -373,7 +406,9 @@ export class StaffManagementComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.items.update(list => list.filter(item => item.id !== id));
+          this.allStaff = this.allStaff.filter(item => item.id !== id);
+          this.totalElements.set(this.allStaff.length);
+          this.updateDisplayedItems();
           this.loading.set(false);
           this.showSuccess('Staff deleted successfully');
         },
