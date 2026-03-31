@@ -323,7 +323,7 @@ export class StaffPaymentHistoryComponent implements OnInit {
           staffName:   inv.openedByName ?? p.processedByName ?? '—',
           method:      p.paymentMethod,
           methodLabel: m.label,
-          paidAt:      p.paymentDate ?? inv.closedAt ?? inv.createdAt,
+          paidAt:      p.paymentDate ?? inv.closedAt ?? '',
           total:       p.amount ?? inv.totalAmount ?? 0,
         });
       }
