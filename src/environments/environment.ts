@@ -4,5 +4,7 @@
 
 export const environment = {
   production: false,
-  API_BASE_URL: 'http://localhost:8082/api/v1'
-};
+ API_BASE_URL: 'http://localhost:8082/api/v1'
+  //API_BASE_URL: 'https://restaurant-management-xs7z.onrender.com/api/v1'
+
+};  
