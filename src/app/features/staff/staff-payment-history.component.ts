@@ -70,7 +70,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
         <div class="header-right">
           <div class="total-badge">
             <mat-icon>payments</mat-icon>
-            {{ totalRevenue() | currency : 'VND' : 'symbol' : '1.0-0' }}
+            {{ totalRevenue() | currency : 'USD' : 'symbol' : '1.2-2' }}
           </div>
           <button class="reload-btn" (click)="loadInvoices()" [disabled]="isLoading()">
             <mat-icon [class.spinning]="isLoading()">refresh</mat-icon>
@@ -150,7 +150,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
                         </span>
                       </td>
                       <td class="time-cell">{{ row.paidAt | date : 'dd/MM/yyyy HH:mm' }}</td>
-                      <td class="amount-cell">{{ row.total | currency : 'VND' : 'symbol' : '1.0-0' }}</td>
+                      <td class="amount-cell">{{ row.total | currency : 'USD' : 'symbol' : '1.2-2' }}</td>
                     </tr>
                   }
                 </tbody>
@@ -159,7 +159,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
             <div class="table-footer">
               <span>{{ filteredRows().length }} transaction(s) found</span>
               <span class="footer-total">
-                Filtered total: {{ filteredTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}
+                Filtered total: {{ filteredTotal() | currency : 'USD' : 'symbol' : '1.2-2' }}
               </span>
             </div>
           }

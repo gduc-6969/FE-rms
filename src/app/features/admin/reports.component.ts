@@ -76,11 +76,11 @@ declare const Chart: any;
         <div class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Total Revenue ({{ selectedYear() }})</div>
-            <div class="stat-value">{{ summary()?.totalRevenue | currency:'VND':'symbol':'1.0-0' }}</div>
+            <div class="stat-value">{{ summary()?.totalRevenue | currency:'USD':'symbol':'1.2-2' }}</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Avg Order Value</div>
-            <div class="stat-value">{{ summary()?.avgOrderValue | currency:'VND':'symbol':'1.0-0' }}</div>
+            <div class="stat-value">{{ summary()?.avgOrderValue | currency:'USD':'symbol':'1.2-2' }}</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Total Invoices Paid</div>
@@ -130,7 +130,7 @@ declare const Chart: any;
                   <td><span class="rank">#{{ dish.rank }}</span></td>
                   <td class="td-name">{{ dish.name }}</td>
                   <td class="td-sales">{{ dish.sales }} orders</td>
-                  <td class="td-revenue">{{ dish.revenue | currency:'VND':'symbol':'1.0-0' }}</td>
+                  <td class="td-revenue">{{ dish.revenue | currency:'USD':'symbol':'1.2-2' }}</td>
                   <td>
                     <div class="contrib-cell">
                       <div class="progress-bar">
