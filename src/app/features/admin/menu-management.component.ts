@@ -142,7 +142,7 @@ import { MenuItemService } from '../../core/services/menu-item.service';
                   <td>
                     <span class="category-tag">{{ item.categoryName }}</span>
                   </td>
-                  <td class="td-price">{{ item.price | currency:'VND' }}</td>
+                  <td class="td-price">{{ item.price | currency:'USD' }}</td>
                   <td>
                     <div class="status-cell">
                       <label class="toggle">
