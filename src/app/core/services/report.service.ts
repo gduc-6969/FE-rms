@@ -81,4 +81,18 @@ export class ReportService {
       .get<ApiResponse<TopSellingItemResponse[]>>(`${this.statsUrl}/top-selling/custom`, { params })
       .pipe(map(res => res.data));
   }
+
+  exportExcel(year: number): Observable<Blob> {
+  return this.http.get(
+    `${this.baseUrl}/export/excel?year=${year}`,
+    { responseType: 'blob' }
+  );
+}
+
+exportPdf(year: number): Observable<Blob> {
+  return this.http.get(
+    `${this.baseUrl}/export/pdf?year=${year}`,
+    { responseType: 'blob' }
+  );
+}
 }

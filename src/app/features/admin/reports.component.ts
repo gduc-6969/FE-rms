@@ -534,10 +534,32 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   exportExcel(): void {
-    alert('Exporting Excel report...');
-  }
+  const year = this.selectedYear();
+  this.reportService.exportExcel(year).subscribe({
+    next: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${year}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    error: () => alert('Export Excel failed')
+  });
+}
 
-  exportPdf(): void {
-    alert('Exporting PDF report...');
-  }
+exportPdf(): void {
+  const year = this.selectedYear();
+  this.reportService.exportPdf(year).subscribe({
+    next: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${year}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    error: () => alert('Export PDF failed')
+  });
+}
 }
