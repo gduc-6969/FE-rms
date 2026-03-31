@@ -83,7 +83,7 @@ declare const Chart: any;
             <div class="stat-value">{{ summary()?.avgOrderValue | currency:'VND':'symbol':'1.0-0' }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Total Orders</div>
+            <div class="stat-label">Total Invoices Paid</div>
             <div class="stat-value">{{ summary()?.totalOrders | number }}</div>
           </div>
         </div>
@@ -349,7 +349,6 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
   private barChart: any;
   private pieChart: any;
 
-  // State signals
   readonly loading = signal(true);
   readonly selectedYear = signal(new Date().getFullYear());
   readonly summary = signal<ReportSummaryResponse | null>(null);
@@ -357,7 +356,6 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly monthlyData = signal<MonthlyReportResponse[]>([]);
   readonly categoryData = signal<CategoryReportResponse[]>([]);
 
-  // Year dropdown options
   readonly availableYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   ngOnInit(): void {
@@ -402,7 +400,6 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
           this.loading.set(false);
           this.cdr.markForCheck();
 
-          // Rebuild charts after data loaded
           setTimeout(() => this.buildCharts(), 100);
         },
         error: (err) => {
@@ -431,7 +428,6 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
   private buildBarChart(): void {
     if (!this.barCanvas?.nativeElement) return;
 
-    // Destroy existing chart
     this.barChart?.destroy();
 
     const monthlyData = this.monthlyData();
@@ -496,7 +492,6 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
   private buildPieChart(): void {
     if (!this.pieCanvas?.nativeElement) return;
 
-    // Destroy existing chart
     this.pieChart?.destroy();
 
     const categoryData = this.categoryData();
@@ -506,7 +501,6 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
     const labels = categoryData.map(c => c.categoryName);
     const values = categoryData.map(c => c.percentage || 0);
 
-    // Color palette
     const colors = ['#ff5f2e', '#f59e0b', '#2dd4bf', '#a3e635', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
     this.pieChart = new Chart(ctx, {
