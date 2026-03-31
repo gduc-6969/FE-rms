@@ -70,7 +70,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
         <div class="header-right">
           <div class="total-badge">
             <mat-icon>payments</mat-icon>
-            {{ totalRevenue() | currency : 'VND' : 'symbol' : '1.0-0' }}
+            {{ totalRevenue() | currency : 'USD' : 'symbol' : '1.2-2' }}
           </div>
           <button class="reload-btn" (click)="loadInvoices()" [disabled]="isLoading()">
             <mat-icon [class.spinning]="isLoading()">refresh</mat-icon>
@@ -92,7 +92,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
       <div class="filter-row">
         <div class="search-box">
           <mat-icon>search</mat-icon>
-          <input type="text" placeholder="Search by receipt code, table or staff..."
+          <input type="text" placeholder="Search by receipt, table, staff or date (dd/mm/yyyy hh:mm)..."
             [value]="searchQuery()"
             (input)="searchQuery.set(asStr($event))">
         </div>
@@ -150,7 +150,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
                         </span>
                       </td>
                       <td class="time-cell">{{ row.paidAt | date : 'dd/MM/yyyy HH:mm' }}</td>
-                      <td class="amount-cell">{{ row.total | currency : 'VND' : 'symbol' : '1.0-0' }}</td>
+                      <td class="amount-cell">{{ row.total | currency : 'USD' : 'symbol' : '1.2-2' }}</td>
                     </tr>
                   }
                 </tbody>
@@ -159,7 +159,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
             <div class="table-footer">
               <span>{{ filteredRows().length }} transaction(s) found</span>
               <span class="footer-total">
-                Filtered total: {{ filteredTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}
+                Filtered total: {{ filteredTotal() | currency : 'USD' : 'symbol' : '1.2-2' }}
               </span>
             </div>
           }
@@ -343,7 +343,8 @@ export class StaffPaymentHistoryComponent implements OnInit {
       items = items.filter(r =>
         r.invoiceCode.toLowerCase().includes(q) ||
         r.tableCode.toLowerCase().includes(q) ||
-        (r.staffName || '').toLowerCase().includes(q)
+        (r.staffName || '').toLowerCase().includes(q) ||
+        this.formatPaidAt(r.paidAt).includes(q)
       );
     }
     return items;
@@ -389,6 +390,17 @@ export class StaffPaymentHistoryComponent implements OnInit {
 
   asStr(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  formatPaidAt(paidAt: string): string {
+    const d = new Date(paidAt);
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
   }
 
   methodIcon(method: string): string {

@@ -35,7 +35,7 @@ import { MockDataService } from '../../core/services/mock-data.service';
 
           <ng-container matColumnDef="total">
             <th mat-header-cell *matHeaderCellDef>Total</th>
-            <td mat-cell *matCellDef="let row">{{ row.total | currency : 'VND' : 'symbol' : '1.0-0' }}</td>
+            <td mat-cell *matCellDef="let row">{{ row.total | currency : 'USD' : 'symbol' : '1.2-2' }}</td>
           </ng-container>
 
           <ng-container matColumnDef="waiter">

@@ -88,7 +88,7 @@ const ALL_CATEGORY_ID = -1;
                       </div>
                       <p class="dish-category-label">{{ item.categoryName }}</p>
                     </div>
-                    <span class="dish-price">{{ item.price | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+                    <span class="dish-price">{{ item.price | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
                   </div>
                   <p class="dish-desc">{{ item.categoryName }} · Price: {{ item.price | number }}đ</p>
                 </div>
