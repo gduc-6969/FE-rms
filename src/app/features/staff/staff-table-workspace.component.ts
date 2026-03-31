@@ -1,59 +1,86 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { CurrencyPipe } from '@angular/common';
+import {
+  ChangeDetectionStrategy, Component, OnDestroy, OnInit,
+  computed, inject, signal
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
-import { MenuItem, PaymentMethod, TableStatus } from '../../core/models/app.models';
-import { TableSessionService } from '../../core/services/table-session.service';
+import {
+  ApiMenuItem, CategoryResponse,
+  WorkspaceApiService
+} from '../../core/services/workspace-api.service';
+import { forkJoin } from 'rxjs';
+
+interface CartItem {
+  menuItemId: number;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+type BackendPaymentMethod = 'tien_mat' | 'the' | 'chuyen_khoan' | 'vi_dien_tu';
+
+const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: string }[] = [
+  { label: 'Cash', value: 'tien_mat', icon: 'payments' },
+  { label: 'Card', value: 'the', icon: 'credit_card' },
+  { label: 'Transfer', value: 'chuyen_khoan', icon: 'account_balance' },
+  { label: 'E-Wallet', value: 'vi_dien_tu', icon: 'account_balance_wallet' },
+];
 
 @Component({
   selector: 'app-staff-table-workspace',
   standalone: true,
-  imports: [
-    MatCardModule, MatButtonModule, MatIconModule, MatInputModule,
-    MatFormFieldModule, ReactiveFormsModule, FormsModule,
-    CurrencyPipe, DatePipe, RouterLink
-  ],
+  imports: [MatIconModule, FormsModule, CurrencyPipe, RouterLink],
   template: `
-    @if (table(); as currentTable) {
+    @if (tableInfo(); as t) {
       <section class="workspace">
         <!-- ═══ LEFT: Menu Browser ═══ -->
         <div class="menu-side">
           <!-- Category tabs -->
           <div class="cat-tabs">
-            @for (cat of categories(); track cat) {
-              <button class="cat-tab" [class.active]="selectedCategory() === cat" (click)="selectedCategory.set(cat)">
-                {{ cat }}
-              </button>
+            <button class="cat-tab" [class.active]="selectedCategoryId() === null"
+              (click)="selectCategory(null)">All</button>
+            @for (cat of categories(); track cat.id) {
+              <button class="cat-tab"
+                [class.active]="selectedCategoryId() === cat.id"
+                (click)="selectCategory(cat.id)">{{ cat.name }}</button>
             }
           </div>
 
           <!-- Search -->
           <div class="search-bar">
             <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Search menu..." [value]="searchQuery()" (input)="searchQuery.set(asInputValue($event))">
+            <input type="text" placeholder="Search menu..."
+              [value]="searchQuery()"
+              (input)="onSearchChange(asStr($event))">
           </div>
 
+          <!-- Loading menu -->
+          @if (menuLoading()) {
+            <div class="menu-loading">
+              <mat-icon class="spin-icon">sync</mat-icon>
+              <span>Loading menu...</span>
+            </div>
+          }
+
           <!-- Menu items grid -->
-          <div class="menu-grid">
-            @for (item of visibleItems(); track item.id) {
-              <button class="menu-item" (click)="addItem(item)">
-                <div class="item-info">
-                  <span class="item-name">{{ item.name }}</span>
-                  <span class="item-price">{{ item.price | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
-                </div>
-                <div class="add-icon"><mat-icon>add</mat-icon></div>
-              </button>
-            }
-            @if (visibleItems().length === 0) {
-              <p class="no-items">No items found</p>
-            }
-          </div>
+          @if (!menuLoading()) {
+            <div class="menu-grid">
+              @for (item of visibleItems(); track item.id) {
+                <button class="menu-item" (click)="addItem(item)">
+                  <div class="item-info">
+                    <span class="item-name">{{ item.name }}</span>
+                    <span class="item-price">{{ item.price | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+                  </div>
+                  <div class="add-icon"><mat-icon>add</mat-icon></div>
+                </button>
+              }
+              @if (visibleItems().length === 0 && !menuLoading()) {
+                <p class="no-items">No items found</p>
+              }
+            </div>
+          }
         </div>
 
         <!-- ═══ RIGHT: Receipt / Cart ═══ -->
@@ -61,40 +88,47 @@ import { TableSessionService } from '../../core/services/table-session.service';
           <!-- Bill Header -->
           <div class="bill-header">
             <div class="bill-title-row">
-              <div class="table-badge">{{ currentTable.name }}</div>
-              <span class="status-chip" [class]="currentTable.status">{{ statusLabel(currentTable.status) }}</span>
+              <div class="table-badge">{{ t.tableCode }}</div>
+              <span class="serving-chip">SERVING</span>
             </div>
-            @if (session(); as s) {
-              <div class="bill-meta">
-                <span><mat-icon class="mi">people</mat-icon> {{ s.guests }} guests</span>
-                <span><mat-icon class="mi">receipt</mat-icon> {{ s.billCode }}</span>
-                <span><mat-icon class="mi">schedule</mat-icon> {{ s.openedAt | date : 'HH:mm' }}</span>
-              </div>
-            }
+            <div class="bill-meta">
+              <span><mat-icon class="mi">people</mat-icon> {{ t.capacity }} seats</span>
+              @if (invoiceId()) {
+                <span><mat-icon class="mi">receipt</mat-icon> #{{ invoiceId() }}</span>
+              }
+            </div>
           </div>
 
-          @if (session(); as currentSession) {
+          <!-- Invoice creating state -->
+          @if (invoiceLoading()) {
+            <div class="empty-cart full">
+              <mat-icon class="spin-icon">sync</mat-icon>
+              <p>Opening table...</p>
+            </div>
+          }
+
+          @if (!invoiceLoading()) {
             <!-- Order items -->
             <div class="order-list">
-              @if (currentSession.orders.length === 0) {
+              @if (cart().length === 0) {
                 <div class="empty-cart">
                   <mat-icon>restaurant_menu</mat-icon>
                   <p>Add items from the menu</p>
                 </div>
               } @else {
-                @for (order of currentSession.orders; track order.id) {
+                @for (item of cart(); track item.menuItemId) {
                   <div class="order-row">
                     <div class="order-info">
-                      <span class="order-name">{{ order.name }}</span>
-                      <span class="order-price">{{ order.price | currency : 'VND' : 'symbol' : '1.0-0' }} each</span>
+                      <span class="order-name">{{ item.name }}</span>
+                      <span class="order-price">{{ item.price | currency : 'VND' : 'symbol' : '1.0-0' }} each</span>
                     </div>
                     <div class="order-controls">
-                      <button class="qty-btn" (click)="updateQty(order.id, order.quantity - 1)"><mat-icon>remove</mat-icon></button>
-                      <span class="qty-val">{{ order.quantity }}</span>
-                      <button class="qty-btn" (click)="updateQty(order.id, order.quantity + 1)"><mat-icon>add</mat-icon></button>
-                      <button class="remove-btn" (click)="removeItem(order.id)"><mat-icon>delete_outline</mat-icon></button>
+                      <button class="qty-btn" (click)="decreaseQty(item)"><mat-icon>remove</mat-icon></button>
+                      <span class="qty-val">{{ item.quantity }}</span>
+                      <button class="qty-btn" (click)="increaseQty(item)"><mat-icon>add</mat-icon></button>
+                      <button class="remove-btn" (click)="removeItem(item)"><mat-icon>delete_outline</mat-icon></button>
                     </div>
-                    <span class="order-subtotal">{{ order.price * order.quantity | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+                    <span class="order-subtotal">{{ item.price * item.quantity | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
                   </div>
                 }
               }
@@ -113,98 +147,83 @@ import { TableSessionService } from '../../core/services/table-session.service';
               <div class="total-row grand"><span>Total</span><span>{{ grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Checkout button -->
             <div class="bill-actions">
-              <button class="action-secondary" (click)="sendKitchen()">
-                <mat-icon>kitchen</mat-icon> Send to Kitchen
-              </button>
-              <button class="action-primary" [disabled]="currentSession.orders.length === 0" (click)="openCheckoutPopup()">
-                <mat-icon>point_of_sale</mat-icon> Checkout
-              </button>
-            </div>
-          } @else {
-            <div class="empty-cart full">
-              <mat-icon>table_restaurant</mat-icon>
-              <p>Open the table to start taking orders</p>
-              <button class="action-primary" (click)="showOpenPopup.set(true)">
-                <mat-icon>add_circle</mat-icon> Open Table
+              <button class="action-checkout"
+                [disabled]="cart().length === 0 || checkoutLoading()"
+                (click)="showCheckoutPopup.set(true)">
+                <mat-icon>point_of_sale</mat-icon>
+                @if (checkoutLoading()) { Processing... } @else { Checkout }
               </button>
             </div>
           }
 
           <!-- Back button -->
-          <a class="back-link" routerLink="/staff/tables" [replaceUrl]="true">
+          <a class="back-link" routerLink="/staff/tables">
             <mat-icon>arrow_back</mat-icon> Back to Tables
           </a>
         </div>
       </section>
-
-      <!-- ═══ Guest Count Popup ═══ -->
-      @if (showOpenPopup()) {
-        <div class="backdrop" (click)="showOpenPopup.set(false)">
-          <div class="modal" (click)="$event.stopPropagation()">
-            <h3>Open {{ currentTable.name }}</h3>
-            <p class="modal-sub">Enter the number of guests to begin.</p>
-            <form [formGroup]="openForm" (ngSubmit)="openTable()" class="modal-form">
-              <div class="guest-grid">
-                @for (n of guestOptions; track n) {
-                  @if (n <= currentTable.capacity) {
-                    <button type="button" class="guest-btn" [class.active]="openForm.controls.guests.value === n"
-                      (click)="openForm.controls.guests.setValue(n)">{{ n }}</button>
-                  }
-                }
-              </div>
-              <div class="modal-actions">
-                <button type="button" class="cancel-btn" (click)="showOpenPopup.set(false)">Cancel</button>
-                <button type="submit" class="confirm-btn" [disabled]="openForm.invalid">Continue</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
 
       <!-- ═══ Checkout Popup ═══ -->
       @if (showCheckoutPopup()) {
         <div class="backdrop" (click)="showCheckoutPopup.set(false)">
           <div class="modal checkout-modal" (click)="$event.stopPropagation()">
             <h3>Payment</h3>
-            <p class="modal-sub">Total: {{ grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</p>
+            <p class="modal-sub">Total: <strong>{{ grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</strong></p>
 
             <label class="modal-label">Payment Method</label>
             <div class="payment-grid">
-              @for (method of paymentMethods; track method) {
-                <button type="button" class="pay-option" [class.active]="selectedPaymentMethod() === method"
-                  (click)="selectedPaymentMethod.set(method)">
-                  <mat-icon>{{ paymentIcon(method) }}</mat-icon>
-                  {{ method }}
+              @for (method of paymentMethods; track method.value) {
+                <button type="button" class="pay-option"
+                  [class.active]="selectedPaymentMethod() === method.value"
+                  (click)="selectedPaymentMethod.set(method.value)">
+                  <mat-icon>{{ method.icon }}</mat-icon>
+                  {{ method.label }}
                 </button>
               }
             </div>
 
-            @if (selectedPaymentMethod() === 'Cash') {
+            @if (selectedPaymentMethod() === 'tien_mat') {
               <label class="modal-label">Amount Received</label>
               <div class="cash-input-row">
-                <input type="number" class="cash-input" [min]="grandTotal()" [(ngModel)]="receivedAmount" placeholder="0">
+                <input type="number" class="cash-input" [min]="grandTotal()"
+                  [(ngModel)]="receivedAmount" placeholder="0">
               </div>
-              @if (receivedAmount >= grandTotal()) {
-                <p class="change-line">Change: {{ receivedAmount - grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</p>
+              @if (receivedAmount >= grandTotal() && receivedAmount > 0) {
+                <p class="change-line">
+                  Change: {{ receivedAmount - grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}
+                </p>
               }
+            }
+
+            @if (checkoutError()) {
+              <p class="checkout-error">{{ checkoutError() }}</p>
             }
 
             <div class="modal-actions">
               <button type="button" class="cancel-btn" (click)="showCheckoutPopup.set(false)">Cancel</button>
-              <button type="button" class="confirm-btn" [disabled]="selectedPaymentMethod() === 'Cash' && receivedAmount < grandTotal()" (click)="checkout()">
-                Confirm Payment
+              <button type="button" class="confirm-checkout-btn"
+                [disabled]="!canConfirmPayment() || checkoutLoading()"
+                (click)="checkout()">
+                @if (checkoutLoading()) { Processing... } @else { Confirm Payment }
               </button>
             </div>
           </div>
         </div>
       }
+
     } @else {
+      <!-- Table not found / load error -->
       <section class="fallback">
-        <mat-icon>error_outline</mat-icon>
-        <h2>Table not found</h2>
-        <a class="action-primary" routerLink="/staff/tables" [replaceUrl]="true">Back to Tables</a>
+        @if (tableLoading()) {
+          <mat-icon class="spin-icon">sync</mat-icon>
+          <p>Loading table info...</p>
+        } @else {
+          <mat-icon>error_outline</mat-icon>
+          <h2>Table not found</h2>
+          <a class="action-primary" routerLink="/staff/tables">Back to Tables</a>
+        }
       </section>
     }
   `,
@@ -222,9 +241,7 @@ import { TableSessionService } from '../../core/services/table-session.service';
       padding: 20px; background: #f8fafc; overflow-y: auto;
     }
 
-    .cat-tabs {
-      display: flex; gap: 8px; flex-wrap: wrap;
-    }
+    .cat-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
     .cat-tab {
       padding: 8px 18px; border-radius: 20px; border: 1px solid #e2e8f0;
       background: #fff; font-size: 14px; font-weight: 500; color: #475569;
@@ -244,11 +261,16 @@ import { TableSessionService } from '../../core/services/table-session.service';
       background: transparent;
     }
 
+    .menu-loading {
+      display: flex; align-items: center; gap: 10px;
+      color: #64748b; font-size: 14px; padding: 20px;
+    }
+    .menu-loading mat-icon { color: #ff6a33; }
+
     .menu-grid {
       display: grid; gap: 10px;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     }
-
     .menu-item {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0;
@@ -282,14 +304,11 @@ import { TableSessionService } from '../../core/services/table-session.service';
       background: #ff6a33; color: #fff; padding: 6px 14px;
       border-radius: 20px; font-weight: 700; font-size: 14px;
     }
-    .status-chip {
+    .serving-chip {
+      background: rgba(234,179,8,0.15); color: #fbbf24;
       padding: 4px 12px; border-radius: 20px; font-size: 11px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      font-weight: 700; letter-spacing: 0.5px;
     }
-    .status-chip.available { background: rgba(16,185,129,0.15); color: #34d399; }
-    .status-chip.serving { background: rgba(245,158,11,0.15); color: #fbbf24; }
-    .status-chip.pending-payment { background: rgba(239,68,68,0.15); color: #f87171; }
-
     .bill-meta {
       display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #94a3b8;
     }
@@ -346,9 +365,7 @@ import { TableSessionService } from '../../core/services/table-session.service';
     .notes-input::placeholder { color: #475569; }
 
     /* ─── Totals ─── */
-    .totals {
-      padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.06);
-    }
+    .totals { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
     .total-row {
       display: flex; justify-content: space-between; font-size: 14px;
       color: #94a3b8; margin-bottom: 6px;
@@ -359,30 +376,22 @@ import { TableSessionService } from '../../core/services/table-session.service';
       font-size: 22px; font-weight: 800; color: #ff6a33;
     }
 
-    /* ─── Actions ─── */
-    .bill-actions {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-      padding: 14px 20px;
+    /* ─── Checkout Button ─── */
+    .bill-actions { padding: 14px 20px; }
+    .action-checkout {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px; border-radius: 14px; border: none;
+      background: #ff6a33; color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
     }
-    .action-secondary, .action-primary {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: all 0.15s; border: none;
-    }
-    .action-secondary {
-      background: #2d3039; color: #e2e8f0;
-    }
-    .action-secondary:hover { background: #3b3f4a; }
-    .action-primary {
-      background: #ff6a33; color: #fff;
-    }
-    .action-primary:hover { background: #e85d2a; }
-    .action-primary:disabled { background: #374151; color: #64748b; cursor: not-allowed; }
-    .action-primary mat-icon, .action-secondary mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-checkout:hover:not(:disabled) { background: #e85d2a; }
+    .action-checkout:disabled { background: #374151; color: #64748b; cursor: not-allowed; }
+    .action-checkout mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .back-link {
       display: flex; align-items: center; gap: 6px; padding: 12px 20px;
-      color: #64748b; font-size: 13px; text-decoration: none; border-top: 1px solid rgba(255,255,255,0.06);
+      color: #64748b; font-size: 13px; text-decoration: none;
+      border-top: 1px solid rgba(255,255,255,0.06);
     }
     .back-link:hover { color: #cbd5e1; }
     .back-link mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -393,46 +402,18 @@ import { TableSessionService } from '../../core/services/table-session.service';
       display: grid; place-items: center; z-index: 1000;
     }
     .modal {
-      width: min(92vw, 420px); background: #fff; border-radius: 20px;
+      width: min(92vw, 440px); background: #fff; border-radius: 20px;
       padding: 28px; text-align: center; color: #1e293b;
     }
     .modal h3 { margin: 0 0 4px; font-size: 20px; font-weight: 700; }
     .modal-sub { margin: 0 0 20px; color: #64748b; font-size: 14px; }
+    .modal-sub strong { color: #ff6a33; font-size: 18px; }
     .modal-label {
       display: block; text-align: left; font-size: 13px; font-weight: 600;
       color: #475569; margin-bottom: 8px;
     }
-    .modal-form { display: flex; flex-direction: column; gap: 16px; }
 
-    .guest-grid {
-      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
-    }
-    .guest-btn {
-      width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1px solid #e2e8f0;
-      background: #f8fafc; font-size: 18px; font-weight: 700; color: #475569;
-      cursor: pointer; transition: all 0.15s; display: grid; place-items: center;
-    }
-    .guest-btn:hover { border-color: #ff6a33; color: #ff6a33; }
-    .guest-btn.active { background: #ff6a33; color: #fff; border-color: #ff6a33; }
-
-    .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
-    .cancel-btn {
-      flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;
-      background: #fff; font-size: 15px; font-weight: 600; color: #64748b; cursor: pointer;
-    }
-    .confirm-btn {
-      flex: 1; padding: 12px; border-radius: 12px; border: none;
-      background: #ff6a33; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer;
-    }
-    .confirm-btn:hover { background: #e85d2a; }
-    .confirm-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
-
-    /* Checkout modal */
-    .checkout-modal { text-align: left; }
-    .checkout-modal h3, .checkout-modal .modal-sub { text-align: center; }
-    .payment-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;
-    }
+    .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
     .pay-option {
       display: flex; align-items: center; gap: 8px;
       padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;
@@ -441,13 +422,31 @@ import { TableSessionService } from '../../core/services/table-session.service';
     .pay-option mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .pay-option:hover { border-color: #ff6a33; }
     .pay-option.active { border-color: #ff6a33; background: #fff7ed; color: #ea580c; font-weight: 600; }
+
     .cash-input-row { margin-bottom: 12px; }
     .cash-input {
       width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px;
-      font-size: 16px; color: #1e293b; outline: none;
+      font-size: 16px; color: #1e293b; outline: none; box-sizing: border-box;
     }
     .cash-input:focus { border-color: #ff6a33; }
     .change-line { color: #10b981; font-weight: 600; font-size: 15px; margin: 0 0 12px; }
+
+    .checkout-error {
+      color: #dc2626; font-size: 13px; margin: 0 0 12px;
+      padding: 8px 12px; background: #fef2f2; border-radius: 8px;
+    }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+    .cancel-btn {
+      flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;
+      background: #fff; font-size: 15px; font-weight: 600; color: #64748b; cursor: pointer;
+    }
+    .confirm-checkout-btn {
+      flex: 1; padding: 12px; border-radius: 12px; border: none;
+      background: #ff6a33; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer;
+    }
+    .confirm-checkout-btn:hover:not(:disabled) { background: #e85d2a; }
+    .confirm-checkout-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
 
     /* Fallback */
     .fallback {
@@ -456,6 +455,15 @@ import { TableSessionService } from '../../core/services/table-session.service';
     }
     .fallback mat-icon { font-size: 48px; width: 48px; height: 48px; }
     .fallback h2 { margin: 0; color: #1e293b; }
+    .action-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 12px 24px; border-radius: 12px;
+      background: #ff6a33; color: #fff; font-weight: 600; text-decoration: none;
+    }
+
+    /* Spinner */
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .spin-icon { animation: spin 1s linear infinite; }
 
     @media (max-width: 900px) {
       .workspace { grid-template-columns: 1fr; }
@@ -464,131 +472,222 @@ import { TableSessionService } from '../../core/services/table-session.service';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StaffTableWorkspaceComponent {
+export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly sessionService = inject(TableSessionService);
-  private readonly authService = inject(AuthService);
-  private readonly fb = inject(FormBuilder);
+  private readonly api = inject(WorkspaceApiService);
 
   readonly tableId = signal(Number(this.route.snapshot.paramMap.get('tableId')) || 0);
-  readonly table = computed(() => this.sessionService.getTableById(this.tableId()));
-  readonly session = computed(() => this.sessionService.getSessionByTable(this.tableId()));
-  readonly menuItems = this.sessionService.menuItems;
 
-  readonly categories = computed(() => {
-    const cats = Array.from(new Set(this.menuItems().map(item => item.category)));
-    return cats.length ? cats : ['Menu'];
-  });
+  // ─── Data signals ───
+  readonly tableInfo = signal<{ id: number; tableCode: string; capacity: number; status: string } | null>(null);
+  readonly categories = signal<CategoryResponse[]>([]);
+  readonly allMenuItems = signal<ApiMenuItem[]>([]);
+  readonly invoiceId = signal<number | null>(null);
 
-  readonly selectedCategory = signal('');
+  // ─── Loading states ───
+  readonly tableLoading = signal(true);
+  readonly menuLoading = signal(true);
+  readonly invoiceLoading = signal(true);
+  readonly checkoutLoading = signal(false);
+
+  // ─── Cart ───
+  readonly cart = signal<CartItem[]>([]);
+
+  // ─── Filter ───
+  readonly selectedCategoryId = signal<number | null>(null);
   readonly searchQuery = signal('');
-  readonly showOpenPopup = signal(false);
-  readonly showCheckoutPopup = signal(false);
-  readonly selectedPaymentMethod = signal<PaymentMethod>('Cash');
-  readonly paymentMethods: PaymentMethod[] = ['Cash', 'Card', 'Transfer', 'E-Wallet'];
-  readonly guestOptions = Array.from({ length: 10 }, (_, i) => i + 1);
   orderNote = '';
+
+  // ─── Checkout ───
+  readonly showCheckoutPopup = signal(false);
+  readonly selectedPaymentMethod = signal<BackendPaymentMethod>('tien_mat');
+  readonly checkoutError = signal<string | null>(null);
   receivedAmount = 0;
 
+  readonly paymentMethods = PAYMENT_METHODS;
+
   readonly visibleItems = computed(() => {
-    const category = this.selectedCategory();
-    const query = this.searchQuery().toLowerCase().trim();
-    let items = this.menuItems();
-    if (category) {
-      items = items.filter(item => item.category === category);
+    const catId = this.selectedCategoryId();
+    const q = this.searchQuery().toLowerCase().trim();
+    let items = this.allMenuItems();
+    if (catId !== null) {
+      items = items.filter(i => i.categoryId === catId);
     }
-    if (query) {
-      items = items.filter(item => item.name.toLowerCase().includes(query));
+    if (q) {
+      items = items.filter(i => i.name.toLowerCase().includes(q));
     }
     return items;
   });
 
-  readonly openForm = this.fb.nonNullable.group({
-    guests: [2, [Validators.required, Validators.min(1), Validators.max(20)]]
-  });
-
-  readonly subtotal = computed(() => this.sessionService.getBillTotal(this.session()));
-  readonly tax = computed(() => this.sessionService.getBillTax(this.session()));
+  readonly subtotal = computed(() =>
+    this.cart().reduce((sum, i) => sum + i.price * i.quantity, 0)
+  );
+  readonly tax = computed(() => Math.round(this.subtotal() * 0.1));
   readonly grandTotal = computed(() => this.subtotal() + this.tax());
 
-  constructor() {
-    const firstCategory = this.categories()[0] ?? '';
-    this.selectedCategory.set(firstCategory);
+  readonly canConfirmPayment = computed(() => {
+    if (this.selectedPaymentMethod() === 'tien_mat') {
+      return this.receivedAmount >= this.grandTotal();
+    }
+    return true;
+  });
 
-    if (!this.table()) {
+  ngOnInit(): void {
+    const id = this.tableId();
+    if (!id) {
       this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
       return;
     }
 
-    if (this.table()!.status === 'available' && !this.session()) {
-      this.showOpenPopup.set(true);
-    }
+    // Load table info + categories + menu items in parallel
+    forkJoin({
+      table: this.api.getTableById(id),
+      categories: this.api.getCategories(),
+      menuItems: this.api.getAllAvailableMenuItems()
+    }).subscribe({
+      next: ({ table, categories, menuItems }) => {
+        this.tableInfo.set(table);
+        this.categories.set(categories);
+        this.allMenuItems.set(menuItems);
+        this.tableLoading.set(false);
+        this.menuLoading.set(false);
+
+        // Try finding an existing open invoice first (bàn đang phục vụ)
+        // If none found, create a new one (bàn vừa được mở)
+        this.api.getOpenInvoiceByTable(id).subscribe({
+          next: (inv) => {
+            this.invoiceId.set(inv.id);
+            this.invoiceLoading.set(false);
+          },
+          error: () => {
+            // No open invoice → create a new one
+            this.api.createInvoice(id).subscribe({
+              next: (inv) => {
+                this.invoiceId.set(inv.id);
+                this.invoiceLoading.set(false);
+              },
+              error: (err) => {
+                console.error('Failed to create invoice:', err);
+                this.invoiceLoading.set(false);
+              }
+            });
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Failed to load workspace data:', err);
+        this.tableLoading.set(false);
+        this.menuLoading.set(false);
+        this.invoiceLoading.set(false);
+      }
+    });
   }
 
-  asInputValue(event: Event): string {
+  ngOnDestroy(): void {}
+
+  selectCategory(id: number | null): void {
+    this.selectedCategoryId.set(id);
+  }
+
+  asStr(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
-  openTable(): void {
-    if (this.openForm.invalid || !this.table()) return;
-    const guests = this.openForm.getRawValue().guests;
-    this.sessionService.openTable(this.table()!.id, guests);
-    this.showOpenPopup.set(false);
+  onSearchChange(q: string): void {
+    this.searchQuery.set(q);
   }
 
-  addItem(item: MenuItem): void {
-    if (!this.session()) {
-      if (this.table()?.status === 'available') {
-        this.showOpenPopup.set(true);
-      }
+  addItem(item: ApiMenuItem): void {
+    const existing = this.cart().find(c => c.menuItemId === item.id);
+    if (existing) {
+      this.cart.update(cart =>
+        cart.map(c => c.menuItemId === item.id
+          ? { ...c, quantity: c.quantity + 1 }
+          : c
+        )
+      );
+    } else {
+      this.cart.update(cart => [
+        ...cart,
+        { menuItemId: item.id, name: item.name, price: item.price, quantity: 1 }
+      ]);
+    }
+  }
+
+  increaseQty(item: CartItem): void {
+    this.cart.update(cart =>
+      cart.map(c => c.menuItemId === item.menuItemId
+        ? { ...c, quantity: c.quantity + 1 }
+        : c
+      )
+    );
+  }
+
+  decreaseQty(item: CartItem): void {
+    if (item.quantity <= 1) {
+      this.removeItem(item);
       return;
     }
-    this.sessionService.addOrder(this.tableId(), item.id, 1);
+    this.cart.update(cart =>
+      cart.map(c => c.menuItemId === item.menuItemId
+        ? { ...c, quantity: c.quantity - 1 }
+        : c
+      )
+    );
   }
 
-  updateQty(orderId: number, newQty: number): void {
-    this.sessionService.updateOrderQuantity(this.tableId(), orderId, newQty);
-  }
-
-  removeItem(orderId: number): void {
-    this.sessionService.removeOrder(this.tableId(), orderId);
-  }
-
-  sendKitchen(): void {
-    this.sessionService.markPendingPayment(this.tableId());
-  }
-
-  openCheckoutPopup(): void {
-    if (!this.session()) return;
-    this.receivedAmount = 0;
-    this.showCheckoutPopup.set(true);
+  removeItem(item: CartItem): void {
+    this.cart.update(cart => cart.filter(c => c.menuItemId !== item.menuItemId));
   }
 
   checkout(): void {
-    this.sessionService.closeTable(
-      this.tableId(),
-      this.selectedPaymentMethod(),
-      this.authService.fullName() ?? 'Staff User'
-    );
-    this.showCheckoutPopup.set(false);
-    this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
-  }
+    const invId = this.invoiceId();
+    const tableId = this.tableId();
+    if (!invId || this.cart().length === 0 || this.checkoutLoading()) return;
 
-  paymentIcon(method: PaymentMethod): string {
-    switch (method) {
-      case 'Cash': return 'payments';
-      case 'Card': return 'credit_card';
-      case 'Transfer': return 'account_balance';
-      case 'E-Wallet': return 'account_balance_wallet';
-      default: return 'payment';
-    }
-  }
+    this.checkoutLoading.set(true);
+    this.checkoutError.set(null);
 
-  statusLabel(status: TableStatus): string {
-    if (status === 'available') return 'Free';
-    if (status === 'serving') return 'Serving';
-    if (status === 'pending-payment') return 'Pending Payment';
-    return 'Disabled';
+    const items = this.cart().map(c => ({
+      menuItemId: c.menuItemId,
+      quantity: c.quantity
+    }));
+
+    // Step 1: Create order
+    this.api.createOrder(invId, items).subscribe({
+      next: () => {
+        // Step 2: Create payment
+        this.api.createPayment(invId, this.grandTotal(), this.selectedPaymentMethod()).subscribe({
+          next: () => {
+            // Step 3: Reset table to trong
+            this.api.updateTableStatus(tableId, 'trong').subscribe({
+              next: () => {
+                this.checkoutLoading.set(false);
+                this.showCheckoutPopup.set(false);
+                this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
+              },
+              error: (err) => {
+                console.error('Failed to reset table status:', err);
+                this.checkoutLoading.set(false);
+                this.showCheckoutPopup.set(false);
+                // Payment was successful so still navigate back
+                this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Payment failed:', err);
+            this.checkoutLoading.set(false);
+            this.checkoutError.set('Payment failed. Please try again.');
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Order creation failed:', err);
+        this.checkoutLoading.set(false);
+        this.checkoutError.set('Failed to save order. Please try again.');
+      }
+    });
   }
 }

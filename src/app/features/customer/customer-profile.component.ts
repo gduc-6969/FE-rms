@@ -73,6 +73,11 @@ import { catchError } from 'rxjs/operators';
                       <span><mat-icon>schedule</mat-icon> {{ formatTime(reservation.reservationTime) }}</span>
                       <span><mat-icon>people</mat-icon> {{ reservation.numberOfGuests }} guests</span>
                     </div>
+                    <!-- Status message -->
+                    <div class="status-message" [class]="getStatusBadgeClass(reservation.status)">
+                      <mat-icon>{{ getStatusIcon(reservation.status) }}</mat-icon>
+                      <span>{{ getStatusMessage(reservation.status) }}</span>
+                    </div>
                   </div>
                 </div>
               }
@@ -332,6 +337,37 @@ import { catchError } from 'rxjs/operators';
         height: 16px;
       }
 
+      .status-message {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .status-message.pending {
+        background: rgba(197, 160, 40, 0.08);
+        color: #C5A028;
+        border: 1px solid rgba(197, 160, 40, 0.2);
+      }
+
+      .status-message.accepted {
+        background: rgba(43, 174, 102, 0.08);
+        color: #2BAE66;
+        border: 1px solid rgba(43, 174, 102, 0.2);
+      }
+
+      .status-message mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
       .new-reservation-btn {
         display: flex;
         align-items: center;
@@ -494,9 +530,11 @@ export class CustomerProfileComponent implements OnInit {
       // Filter out nulls and ensure reservation belongs to current customer (phòng khi type string/number)
       const validReservations = results.filter((r): r is ReservationResponse => r !== null && Number(r.customerId) === customerId);
       
-      // Categorize into Active (cho_xac_nhan, da_xac_nhan) and History (others)
-      const active = validReservations.filter(r => r.status === 'cho_xac_nhan' || r.status === 'da_xac_nhan');
-      const history = validReservations.filter(r => r.status === 'da_huy' || r.status === 'khach_den' || r.status === 'khach_khong_den');
+      // Categorize into Active (cho_xac_nhan, da_xac_nhan, khach_den) and History (others)
+      const active = validReservations.filter(r =>
+        r.status === 'cho_xac_nhan' || r.status === 'da_xac_nhan' || r.status === 'khach_den'
+      );
+      const history = validReservations.filter(r => r.status === 'da_huy' || r.status === 'khach_khong_den');
 
       // Sort by newest reservation time (descending)
       active.sort((a, b) => new Date(b.reservationTime).getTime() - new Date(a.reservationTime).getTime());
@@ -512,8 +550,8 @@ export class CustomerProfileComponent implements OnInit {
     switch (status) {
       case 'cho_xac_nhan': return 'pending';
       case 'da_xac_nhan': return 'accepted';
-      case 'da_huy': return 'denied';
       case 'khach_den': return 'accepted';
+      case 'da_huy': return 'denied';
       case 'khach_khong_den': return 'denied';
       default: return 'pending';
     }
@@ -522,11 +560,29 @@ export class CustomerProfileComponent implements OnInit {
   getStatusLabel(status: string): string {
     switch (status) {
       case 'cho_xac_nhan': return 'Pending';
-      case 'da_xac_nhan': return 'Confirmed';
+      case 'da_xac_nhan': return 'Confirmed ✓';
+      case 'khach_den': return 'Seated';
       case 'da_huy': return 'Cancelled';
-      case 'khach_den': return 'Completed';
       case 'khach_khong_den': return 'No Show';
       default: return 'Pending';
+    }
+  }
+
+  getStatusMessage(status: string): string {
+    switch (status) {
+      case 'cho_xac_nhan': return 'Your booking is being reviewed by our staff. We will confirm soon!';
+      case 'da_xac_nhan': return 'Great news! Your table has been confirmed. See you soon!';
+      case 'khach_den': return 'Welcome! Enjoy your meal.';
+      default: return '';
+    }
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'cho_xac_nhan': return 'hourglass_top';
+      case 'da_xac_nhan': return 'check_circle';
+      case 'khach_den': return 'restaurant';
+      default: return 'info';
     }
   }
 
