@@ -71,7 +71,7 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
                 <button class="menu-item" (click)="addItem(item)">
                   <div class="item-info">
                     <span class="item-name">{{ item.name }}</span>
-                    <span class="item-price">{{ item.price | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+                    <span class="item-price">{{ item.price | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
                   </div>
                   <div class="add-icon"><mat-icon>add</mat-icon></div>
                 </button>
@@ -120,7 +120,7 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
                   <div class="order-row">
                     <div class="order-info">
                       <span class="order-name">{{ item.name }}</span>
-                      <span class="order-price">{{ item.price | currency : 'VND' : 'symbol' : '1.0-0' }} each</span>
+                      <span class="order-price">{{ item.price | currency : 'USD' : 'symbol' : '1.2-2' }} each</span>
                     </div>
                     <div class="order-controls">
                       <button class="qty-btn" (click)="decreaseQty(item)"><mat-icon>remove</mat-icon></button>
@@ -128,7 +128,7 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
                       <button class="qty-btn" (click)="increaseQty(item)"><mat-icon>add</mat-icon></button>
                       <button class="remove-btn" (click)="removeItem(item)"><mat-icon>delete_outline</mat-icon></button>
                     </div>
-                    <span class="order-subtotal">{{ item.price * item.quantity | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+                    <span class="order-subtotal">{{ item.price * item.quantity | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
                   </div>
                 }
               }
@@ -158,12 +158,11 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
 
             <!-- Totals -->
             <div class="totals">
-              <div class="total-row"><span>Subtotal</span><span>{{ subtotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
+              <div class="total-row"><span>Subtotal</span><span>{{ subtotal() | currency : 'USD' : 'symbol' : '1.2-2' }}</span></div>
               @if (discount() > 0) {
-                <div class="total-row discount-row"><span>Discount</span><span>-{{ discount() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
+                <div class="total-row discount-row"><span>Discount</span><span>-{{ discount() | currency : 'USD' : 'symbol' : '1.2-2' }}</span></div>
               }
-              <div class="total-row"><span>Tax (10%)</span><span>{{ tax() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
-              <div class="total-row grand"><span>Total</span><span>{{ grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
+              <div class="total-row grand"><span>Total</span><span>{{ grandTotal() | currency : 'USD' : 'symbol' : '1.2-2' }}</span></div>
             </div>
 
             <!-- Checkout button -->
@@ -189,7 +188,7 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
         <div class="backdrop" (click)="showCheckoutPopup.set(false)">
           <div class="modal checkout-modal" (click)="$event.stopPropagation()">
             <h3>Payment</h3>
-            <p class="modal-sub">Total: <strong>{{ grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</strong></p>
+            <p class="modal-sub">Total: <strong>{{ grandTotal() | currency : 'USD' : 'symbol' : '1.2-2' }}</strong></p>
 
             <label class="modal-label">Payment Method</label>
             <div class="payment-grid">
@@ -558,8 +557,7 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
     this.cart().reduce((sum, i) => sum + i.price * i.quantity, 0)
   );
   readonly discount = computed(() => Math.max(0, Number(this.discountAmount()) || 0));
-  readonly tax = computed(() => Math.round((this.subtotal() - this.discount()) * 0.1));
-  readonly grandTotal = computed(() => Math.max(0, this.subtotal() - this.discount() + this.tax()));
+  readonly grandTotal = computed(() => Math.max(0, this.subtotal() - this.discount()));
 
   readonly canConfirmPayment = computed(() => {
     return true;
@@ -711,18 +709,11 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
       next: (invoice) => {
         const realSubtotal = invoice.subtotal;  // tam_tinh từ backend
         const discount = this.discount();
-        const taxAmount = Math.round((realSubtotal - discount) * 0.1);  // Tính tax dựa trên subtotal thực
-        const correctTotal = realSubtotal - discount + taxAmount;  // Total chính xác
+        const correctTotal = Math.max(0, realSubtotal - discount);
+        const discountReason = this.discountReason() || `Discount: ${discount}`;
         
-        // Workaround: Backend không có field tax, nên ta phải:
-        // adjustedDiscount = discount - tax để backend tính: tong_tien = subtotal - (discount - tax) = subtotal - discount + tax
-        const adjustedDiscount = discount - taxAmount;
-        const discountReason = discount > 0 
-          ? (this.discountReason() || `Discount: ${discount}, Tax: ${taxAmount}`)
-          : `Tax 10%: ${taxAmount}`;
-        
-        // Update invoice with adjusted discount that includes tax calculation
-        this.api.updateInvoiceDiscount(invId, tableId, adjustedDiscount, discountReason).subscribe({
+        // Update invoice with discount
+        this.api.updateInvoiceDiscount(invId, tableId, discount, discount > 0 ? discountReason : '').subscribe({
           next: () => {
             // Step 3: Create payment with correct total
             this.api.createPayment(

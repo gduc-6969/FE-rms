@@ -39,22 +39,22 @@ import { IngredientService } from '../../core/services/ingredient.service';
     <section class="rms-page">
       <div class="page-header">
         <div>
-          <h2>Quản lý kho</h2>
-          <p>Quản lý danh sách nguyên liệu và mức cảnh báo tồn kho.</p>
+          <h2>Inventory Management</h2>
+          <p>Manage ingredients and low stock alerts.</p>
         </div>
         <button mat-flat-button color="primary" (click)="startCreate()">
           <mat-icon>add</mat-icon>
-          Thêm nguyên liệu
+          Add Ingredient
         </button>
       </div>
 
-      <!-- Cảnh báo tồn kho thấp -->
+      <!-- Low stock warning -->
       @if (lowStockItems().length > 0) {
         <mat-card class="warning-card">
           <mat-card-content>
             <div class="warning-header">
               <mat-icon>warning</mat-icon>
-              <span>Cảnh báo tồn kho thấp ({{ lowStockItems().length }} nguyên liệu)</span>
+              <span>Low Stock Alert ({{ lowStockItems().length }} ingredients)</span>
             </div>
             <div class="warning-items">
               @for (item of lowStockItems(); track item.id) {
@@ -70,38 +70,38 @@ import { IngredientService } from '../../core/services/ingredient.service';
           <mat-card-content>
             <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
               <mat-form-field appearance="outline">
-                <mat-label>Tên</mat-label>
+                <mat-label>Name</mat-label>
                 <input matInput formControlName="name" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Đơn vị</mat-label>
+                <mat-label>Unit</mat-label>
                 <input matInput formControlName="unit" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Tồn kho</mat-label>
+                <mat-label>Stock Quantity</mat-label>
                 <input matInput type="number" min="0" formControlName="stockQuantity" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Mức cảnh báo</mat-label>
+                <mat-label>Min Stock Level</mat-label>
                 <input matInput type="number" min="0" formControlName="minStockQuantity" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Trạng thái</mat-label>
+                <mat-label>Status</mat-label>
                 <mat-select formControlName="status">
-                  <mat-option value="hoat_dong">Hoạt động</mat-option>
-                  <mat-option value="ngung_hoat_dong">Ngừng hoạt động</mat-option>
+                  <mat-option value="hoat_dong">Active</mat-option>
+                  <mat-option value="ngung_hoat_dong">Inactive</mat-option>
                 </mat-select>
               </mat-form-field>
 
               <div class="actions">
-                <button mat-stroked-button type="button" (click)="cancel()">Hủy</button>
+                <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
                 <button mat-flat-button color="primary" type="submit" 
                   [disabled]="form.invalid || loading()">
-                  {{ loading() ? 'Đang lưu...' : 'Lưu' }}
+                  {{ loading() ? 'Saving...' : 'Save' }}
                 </button>
               </div>
             </form>
@@ -118,17 +118,17 @@ import { IngredientService } from '../../core/services/ingredient.service';
           } @else {
             <table mat-table [dataSource]="items()" class="full-width">
               <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef>Tên</th>
+                <th mat-header-cell *matHeaderCellDef>Name</th>
                 <td mat-cell *matCellDef="let row">{{ row.name }}</td>
               </ng-container>
 
               <ng-container matColumnDef="unit">
-                <th mat-header-cell *matHeaderCellDef>Đơn vị</th>
+                <th mat-header-cell *matHeaderCellDef>Unit</th>
                 <td mat-cell *matCellDef="let row">{{ row.unit }}</td>
               </ng-container>
 
               <ng-container matColumnDef="stockQuantity">
-                <th mat-header-cell *matHeaderCellDef>Tồn kho</th>
+                <th mat-header-cell *matHeaderCellDef>Stock</th>
                 <td mat-cell *matCellDef="let row" 
                   [class.low-stock]="row.stockQuantity <= row.minStockQuantity">
                   {{ row.stockQuantity }}
@@ -136,22 +136,22 @@ import { IngredientService } from '../../core/services/ingredient.service';
               </ng-container>
 
               <ng-container matColumnDef="minStockQuantity">
-                <th mat-header-cell *matHeaderCellDef>Mức cảnh báo</th>
+                <th mat-header-cell *matHeaderCellDef>Min Level</th>
                 <td mat-cell *matCellDef="let row">{{ row.minStockQuantity }}</td>
               </ng-container>
 
               <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Trạng thái</th>
+                <th mat-header-cell *matHeaderCellDef>Status</th>
                 <td mat-cell *matCellDef="let row">{{ statusLabel(row.status) }}</td>
               </ng-container>
 
               <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Hành động</th>
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
                 <td mat-cell *matCellDef="let row">
-                  <button mat-icon-button (click)="startEdit(row)" matTooltip="Sửa">
+                  <button mat-icon-button (click)="startEdit(row)" matTooltip="Edit">
                     <mat-icon>edit</mat-icon>
                   </button>
-                  <button mat-icon-button color="warn" (click)="remove(row.id)" matTooltip="Xóa">
+                  <button mat-icon-button color="warn" (click)="remove(row.id)" matTooltip="Delete">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </td>
@@ -218,7 +218,7 @@ export class InventoryManagementComponent implements OnInit {
   });
 
   statusLabel(status: IngredientStatus): string {
-    return status === 'hoat_dong' ? 'Hoạt động' : 'Ngừng hoạt động';
+    return status === 'hoat_dong' ? 'Active' : 'Inactive';
   }
 
   ngOnInit(): void {
@@ -242,7 +242,7 @@ export class InventoryManagementComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.showError('Không thể tải danh sách nguyên liệu');
+          this.showError('Failed to load ingredients');
           this.loading.set(false);
           this.cdr.markForCheck();
         }
@@ -292,10 +292,10 @@ export class InventoryManagementComponent implements OnInit {
         this.cancel();
         this.loading.set(false);
         this.cdr.markForCheck();
-        this.showSuccess(id === 0 ? 'Thêm nguyên liệu thành công' : 'Cập nhật thành công');
+        this.showSuccess(id === 0 ? 'Ingredient added successfully' : 'Updated successfully');
       },
       error: () => {
-        this.showError(id === 0 ? 'Thêm nguyên liệu thất bại' : 'Cập nhật thất bại');
+        this.showError(id === 0 ? 'Failed to add ingredient' : 'Update failed');
         this.loading.set(false);
         this.cdr.markForCheck();
       }
@@ -311,10 +311,10 @@ export class InventoryManagementComponent implements OnInit {
           this.items.update(list => list.filter(i => i.id !== id));
           this.loading.set(false);
           this.cdr.markForCheck();
-          this.showSuccess('Xóa nguyên liệu thành công');
+          this.showSuccess('Ingredient deleted successfully');
         },
         error: () => {
-          this.showError('Xóa nguyên liệu thất bại');
+          this.showError('Failed to delete ingredient');
           this.loading.set(false);
           this.cdr.markForCheck();
         }
@@ -327,10 +327,10 @@ export class InventoryManagementComponent implements OnInit {
   }
 
   private showSuccess(msg: string): void {
-    this.snackBar.open(msg, 'Đóng', { duration: 3000 });
+    this.snackBar.open(msg, 'Close', { duration: 3000 });
   }
 
   private showError(msg: string): void {
-    this.snackBar.open(msg, 'Đóng', { duration: 4000, panelClass: 'snack-error' });
+    this.snackBar.open(msg, 'Close', { duration: 4000, panelClass: 'snack-error' });
   }
 }

@@ -49,7 +49,7 @@ import { TableSessionService } from '../../core/services/table-session.service';
         <div class="kpi-card">
           <mat-icon class="kpi-icon">payments</mat-icon>
           <div class="kpi-info">
-            <span class="kpi-value">{{ totalPaidAmount() | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+            <span class="kpi-value">{{ totalPaidAmount() | currency : 'USD' : 'symbol' : '1.2-2' }}</span>
             <span class="kpi-label">Revenue Collected</span>
           </div>
         </div>
@@ -87,7 +87,7 @@ import { TableSessionService } from '../../core/services/table-session.service';
                     <td>{{ row.startTime }}</td>
                     <td>{{ row.endTime || '—' }}</td>
                     <td>{{ row.totalBills }}</td>
-                    <td class="revenue-cell">{{ row.revenue | currency : 'VND' : 'symbol' : '1.0-0' }}</td>
+                    <td class="revenue-cell">{{ row.revenue | currency : 'USD' : 'symbol' : '1.2-2' }}</td>
                     <td>
                       <span class="status-pill" [class]="row.status">
                         {{ row.status === 'open' ? 'Open' : 'Closed' }}

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Role, UserResponse } from '../models/user.models';
 import { PageResponse } from '../models/pagination.models';
+import { environment } from '../../../environments/environment';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -11,15 +12,25 @@ interface ApiResponse<T> {
   data: T;
 }
 
+export interface CreateStaffRequest {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  role?: Role;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StaffService {          
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8082/api/v1/users';
+  private readonly baseUrl = `${environment.API_BASE_URL}/users`;
 
   getAllStaff(page = 0, size = 10): Observable<PageResponse<UserResponse>> {    
     const params = new HttpParams()
       .set('page', page)
-      .set('size', size);
+      .set('size', size)
+      .set('sortBy', 'id')
+      .set('sortDir', 'desc');
     return this.http
       .get<ApiResponse<PageResponse<UserResponse>>>(`${this.baseUrl}/page`, { params })
       .pipe(map(res => res.data));
@@ -28,6 +39,12 @@ export class StaffService {
   getById(id: number): Observable<UserResponse> {
     return this.http
       .get<ApiResponse<UserResponse>>(`${this.baseUrl}/${id}`)
+      .pipe(map(res => res.data));
+  }
+
+  createStaff(request: CreateStaffRequest): Observable<UserResponse> {
+    return this.http
+      .post<ApiResponse<UserResponse>>(this.baseUrl, request)
       .pipe(map(res => res.data));
   }
 

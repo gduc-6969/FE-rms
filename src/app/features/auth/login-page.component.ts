@@ -54,6 +54,7 @@ import { UserRole } from '../../core/models/app.models';
                 [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password"
                 placeholder="Password"
+                (keydown)="preventSpace($event)"
               />
             </div>
 
@@ -105,7 +106,8 @@ import { UserRole } from '../../core/models/app.models';
                 id="register-password" 
                 type="password" 
                 formControlName="password" 
-                placeholder="Password" 
+                placeholder="Password"
+                (keydown)="preventSpace($event)"
               />
             </div>
 
@@ -487,17 +489,23 @@ export class LoginPageComponent {
 
   readonly loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, Validators.minLength(6), Validators.pattern(/^\S+$/)]],
     rememberMe: [false]
   });
 
   readonly registerForm = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
+    password: ['', [Validators.required, Validators.minLength(6), Validators.pattern(/^\S+$/)]]
   });
 
   readonly showPassword = signal(false);
+
+  preventSpace(event: KeyboardEvent): void {
+    if (event.key === ' ') {
+      event.preventDefault();
+    }
+  }
 
   toggleMode(): void {
     this.mode.set(this.mode() === 'login' ? 'register' : 'login');
