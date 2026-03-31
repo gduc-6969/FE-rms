@@ -9,6 +9,7 @@ import {
   BestSellerResponse,
   TopSellingItemResponse
 } from '../models/report.models';
+import { environment } from '../../../environments/environment';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -19,8 +20,8 @@ interface ApiResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class ReportService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8082/api/v1/reports';
-  private readonly statsUrl = 'http://localhost:8082/api/v1/statistics';
+  private readonly baseUrl = `${environment.API_BASE_URL}/reports`;
+  private readonly statsUrl = `${environment.API_BASE_URL}/statistics`;
 
   // ========== Report APIs ==========
 

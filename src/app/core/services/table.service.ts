@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { TableResponse, TableRequest, TableStatus } from '../models/table.models';
+import { environment } from '../../../environments/environment';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -13,7 +14,7 @@ interface ApiResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class TableService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8082/api/v1/tables';
+  private readonly baseUrl = `${environment.API_BASE_URL}/tables`;
 
   // Get all tables
   getAllTables(): Observable<TableResponse[]> {

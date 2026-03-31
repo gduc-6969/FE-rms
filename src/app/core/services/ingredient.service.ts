@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { IngredientRequest, IngredientResponse } from '../models/ingredient.models';
 import { PageResponse } from '../models/pagination.models';
+import { environment } from '../../../environments/environment';
 
 
 interface ApiResponse<T> {
@@ -15,7 +16,7 @@ interface ApiResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class IngredientService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8082/api/v1/ingredients';
+  private readonly baseUrl = `${environment.API_BASE_URL}/ingredients`;
 
   getAll(page = 0, size = 10): Observable<PageResponse<IngredientResponse>> {
     const params = new HttpParams()

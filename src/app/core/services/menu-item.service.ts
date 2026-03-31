@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { MenuItemRequest, MenuItemResponse, MenuItemStatus } from '../models/menu-item.models';
 import { CategoryResponse } from '../models/category.models';
 import { PageResponse } from '../models/pagination.models';
+import { environment } from '../../../environments/environment';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -15,8 +16,8 @@ interface ApiResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class MenuItemService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8082/api/v1/menu-items';
-  private readonly categoryUrl = 'http://localhost:8082/api/v1/categories';
+  private readonly baseUrl = `${environment.API_BASE_URL}/menu-items`;
+  private readonly categoryUrl = `${environment.API_BASE_URL}/categories`;
 
 
   getAll(page = 0, size = 10): Observable<PageResponse<MenuItemResponse>> {

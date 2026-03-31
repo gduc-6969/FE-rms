@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ApiResponse, CategoryResponse, MenuItemResponse } from '../models/app.models';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MenuService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:8082/api/v1';
+  private readonly apiUrl = environment.API_BASE_URL;
 
   getCategories(): Observable<CategoryResponse[]> {
     return this.http

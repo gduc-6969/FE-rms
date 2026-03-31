@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Role, UserResponse } from '../models/user.models';
 import { PageResponse } from '../models/pagination.models';
+import { environment } from '../../../environments/environment';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -22,7 +23,7 @@ export interface CreateStaffRequest {
 @Injectable({ providedIn: 'root' })
 export class StaffService {          
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8082/api/v1/users';
+  private readonly baseUrl = `${environment.API_BASE_URL}/users`;
 
   getAllStaff(page = 0, size = 10): Observable<PageResponse<UserResponse>> {    
     const params = new HttpParams()

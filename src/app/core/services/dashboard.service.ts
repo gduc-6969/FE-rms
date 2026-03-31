@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { IngredientResponse } from '../models/ingredient.models';
+import { environment } from '../../../environments/environment';
 
 interface ApiResponse<T> { success: boolean; data: T; }
 
@@ -29,7 +30,7 @@ export interface PeakHour    { hour: string; count: number;   }
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly http = inject(HttpClient);
-  private readonly base = 'http://localhost:8082/api/v1';
+  private readonly base = environment.API_BASE_URL;
 
   getSummary(): Observable<DashboardSummary> {
     return this.http
