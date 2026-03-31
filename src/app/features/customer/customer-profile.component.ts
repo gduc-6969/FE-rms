@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -459,7 +459,7 @@ import { catchError } from 'rxjs/operators';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CustomerProfileComponent implements OnInit {
+export class CustomerProfileComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   private readonly reservationService = inject(ReservationService);
 
@@ -467,8 +467,18 @@ export class CustomerProfileComponent implements OnInit {
   historyReservations = signal<ReservationResponse[]>([]);
   isLoading = signal(true);
 
+  private focusHandler = () => this.loadMyReservations();
+  private refreshInterval: ReturnType<typeof setInterval> | null = null;
+
   ngOnInit() {
     this.loadMyReservations();
+    window.addEventListener('focus', this.focusHandler);
+    this.refreshInterval = setInterval(() => this.loadMyReservations(), 30_000);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('focus', this.focusHandler);
+    if (this.refreshInterval) clearInterval(this.refreshInterval);
   }
 
   loadMyReservations() {
