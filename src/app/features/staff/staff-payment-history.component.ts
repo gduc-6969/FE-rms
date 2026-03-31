@@ -92,7 +92,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
       <div class="filter-row">
         <div class="search-box">
           <mat-icon>search</mat-icon>
-          <input type="text" placeholder="Search by receipt code, table or staff..."
+          <input type="text" placeholder="Search by receipt, table, staff or date (dd/mm/yyyy hh:mm)..."
             [value]="searchQuery()"
             (input)="searchQuery.set(asStr($event))">
         </div>
@@ -343,7 +343,8 @@ export class StaffPaymentHistoryComponent implements OnInit {
       items = items.filter(r =>
         r.invoiceCode.toLowerCase().includes(q) ||
         r.tableCode.toLowerCase().includes(q) ||
-        (r.staffName || '').toLowerCase().includes(q)
+        (r.staffName || '').toLowerCase().includes(q) ||
+        this.formatPaidAt(r.paidAt).includes(q)
       );
     }
     return items;
@@ -389,6 +390,17 @@ export class StaffPaymentHistoryComponent implements OnInit {
 
   asStr(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  formatPaidAt(paidAt: string): string {
+    const d = new Date(paidAt);
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
   }
 
   methodIcon(method: string): string {
