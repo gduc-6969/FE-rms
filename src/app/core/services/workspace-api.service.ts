@@ -23,6 +23,11 @@ export interface InvoiceResponse {
   id: number;
   tableId: number;
   tableCode: string;
+  customerId?: number;
+  customerName?: string;
+  subtotal: number;  // tam_tinh
+  discount?: number;
+  discountReason?: string;
   status: string;
   totalAmount: number;
   createdAt: string;
@@ -142,6 +147,16 @@ export class WorkspaceApiService {
       .pipe(map(r => r.data));
   }
 
+  /** Lấy invoice theo ID */
+  getInvoiceById(invoiceId: number): Observable<InvoiceResponse> {
+    return this.http
+      .get<{ data: InvoiceResponse }>(
+        `${this.apiUrl}/invoices/${invoiceId}`,
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(r => r.data));
+  }
+
   /** Ghi order (danh sách món) vào hóa đơn */
   createOrder(invoiceId: number, items: { menuItemId: number; quantity: number }[]): Observable<OrderResponse> {
     return this.http
@@ -154,11 +169,31 @@ export class WorkspaceApiService {
   }
 
   /** Thanh toán hóa đơn */
-  createPayment(invoiceId: number, amount: number, paymentMethod: string): Observable<PaymentResponse> {
+  createPayment(
+    invoiceId: number,
+    amount: number,
+    paymentMethod: string
+  ): Observable<PaymentResponse> {
     return this.http
       .post<{ data: PaymentResponse }>(
         `${this.apiUrl}/payments`,
         { invoiceId, amount, paymentMethod },
+        { headers: this.authHeaders() }
+      )
+      .pipe(map(r => r.data));
+  }
+
+  /** Cập nhật discount cho invoice */
+  updateInvoiceDiscount(
+    invoiceId: number,
+    tableId: number,
+    discount: number,
+    discountReason?: string
+  ): Observable<InvoiceResponse> {
+    return this.http
+      .put<{ data: InvoiceResponse }>(
+        `${this.apiUrl}/invoices/${invoiceId}/discount`,
+        { tableId, discount, discountReason },
         { headers: this.authHeaders() }
       )
       .pipe(map(r => r.data));

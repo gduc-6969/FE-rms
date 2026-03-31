@@ -40,6 +40,7 @@ interface PaymentRecord {
 interface PaymentRow {
   invoiceCode: string;
   tableCode: string;
+  customerName: string;
   staffName: string;
   method: string;
   methodLabel: string;
@@ -128,6 +129,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
                   <tr>
                     <th>Receipt</th>
                     <th>Table</th>
+                    <th>Customer</th>
                     <th>Staff</th>
                     <th>Method</th>
                     <th>Time</th>
@@ -139,6 +141,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
                     <tr>
                       <td class="code-cell">{{ row.invoiceCode }}</td>
                       <td><span class="table-badge">{{ row.tableCode }}</span></td>
+                      <td class="customer-cell">{{ row.customerName || '—' }}</td>
                       <td class="staff-cell">{{ row.staffName || '—' }}</td>
                       <td>
                         <span class="method-badge" [attr.data-method]="row.method">
@@ -267,6 +270,7 @@ const METHOD_MAP: Record<string, { label: string; icon: string }> = {
     .pay-table th:last-child, .pay-table td:last-child { text-align: right; }
 
     .code-cell { font-family: monospace; font-weight: 700; color: #1e293b; font-size: 13px; }
+    .customer-cell { color: #7c3aed; font-size: 13px; font-weight: 600; }
     .staff-cell { color: #64748b; font-size: 13px; }
     .time-cell { color: #64748b; font-size: 13px; white-space: nowrap; }
     .amount-cell { font-weight: 700; color: #ff6a33; }
@@ -315,6 +319,7 @@ export class StaffPaymentHistoryComponent implements OnInit {
         rows.push({
           invoiceCode: inv.invoiceCode ?? `#${inv.id}`,
           tableCode:   inv.tableCode ?? '—',
+          customerName: inv.customerName ?? 'Walk-in',
           staffName:   inv.openedByName ?? p.processedByName ?? '—',
           method:      p.paymentMethod,
           methodLabel: m.label,

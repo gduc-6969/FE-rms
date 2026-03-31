@@ -10,7 +10,7 @@ import {
   ApiMenuItem, CategoryResponse,
   WorkspaceApiService
 } from '../../core/services/workspace-api.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Observable, of } from 'rxjs';
 
 interface CartItem {
   menuItemId: number;
@@ -140,9 +140,28 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
               <input type="text" class="notes-input" placeholder="Special requests / notes..." [(ngModel)]="orderNote">
             </div>
 
+            <!-- Discount Section -->
+            <div class="discount-section">
+              <div class="discount-row">
+                <mat-icon class="mi">local_offer</mat-icon>
+                <input type="number" class="discount-input" placeholder="Discount amount"
+                  [value]="discountAmount()"
+                  (input)="discountAmount.set(asNum($event))"
+                  [min]="0" [max]="subtotal()">
+              </div>
+              @if (discount() > 0) {
+                <input type="text" class="discount-reason-input" placeholder="Discount reason..."
+                  [value]="discountReason()"
+                  (input)="discountReason.set(asStr($event))">
+              }
+            </div>
+
             <!-- Totals -->
             <div class="totals">
               <div class="total-row"><span>Subtotal</span><span>{{ subtotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
+              @if (discount() > 0) {
+                <div class="total-row discount-row"><span>Discount</span><span>-{{ discount() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
+              }
               <div class="total-row"><span>Tax (10%)</span><span>{{ tax() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
               <div class="total-row grand"><span>Total</span><span>{{ grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}</span></div>
             </div>
@@ -183,19 +202,6 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
                 </button>
               }
             </div>
-
-            @if (selectedPaymentMethod() === 'tien_mat') {
-              <label class="modal-label">Amount Received</label>
-              <div class="cash-input-row">
-                <input type="number" class="cash-input" [min]="grandTotal()"
-                  [(ngModel)]="receivedAmount" placeholder="0">
-              </div>
-              @if (receivedAmount >= grandTotal() && receivedAmount > 0) {
-                <p class="change-line">
-                  Change: {{ receivedAmount - grandTotal() | currency : 'VND' : 'symbol' : '1.0-0' }}
-                </p>
-              }
-            }
 
             @if (checkoutError()) {
               <p class="checkout-error">{{ checkoutError() }}</p>
@@ -364,12 +370,37 @@ const PAYMENT_METHODS: { label: string; value: BackendPaymentMethod; icon: strin
     }
     .notes-input::placeholder { color: #475569; }
 
+    /* ─── Discount Section ─── */
+    .discount-section {
+      padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .discount-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .discount-row .mi { color: #10b981; }
+    .discount-input {
+      flex: 1; border: 1px solid #374151; outline: none;
+      background: rgba(255,255,255,0.03); color: #cbd5e1;
+      font-size: 13px; padding: 8px 12px; border-radius: 8px;
+    }
+    .discount-input::placeholder { color: #475569; }
+    .discount-input:focus { border-color: #10b981; }
+    .discount-reason-input {
+      border: 1px solid #374151; outline: none;
+      background: rgba(255,255,255,0.03); color: #cbd5e1;
+      font-size: 12px; padding: 6px 12px; border-radius: 6px;
+    }
+    .discount-reason-input::placeholder { color: #475569; }
+    .discount-reason-input:focus { border-color: #10b981; }
+
     /* ─── Totals ─── */
     .totals { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
     .total-row {
       display: flex; justify-content: space-between; font-size: 14px;
       color: #94a3b8; margin-bottom: 6px;
     }
+    .total-row.discount-row { color: #10b981; }
     .total-row.grand {
       margin-top: 10px; padding-top: 10px;
       border-top: 1px solid rgba(255,255,255,0.1);
@@ -499,11 +530,14 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
   readonly searchQuery = signal('');
   orderNote = '';
 
+  // ─── Discount fields ───
+  readonly discountAmount = signal(0);
+  readonly discountReason = signal('');
+
   // ─── Checkout ───
   readonly showCheckoutPopup = signal(false);
   readonly selectedPaymentMethod = signal<BackendPaymentMethod>('tien_mat');
   readonly checkoutError = signal<string | null>(null);
-  receivedAmount = 0;
 
   readonly paymentMethods = PAYMENT_METHODS;
 
@@ -523,13 +557,11 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
   readonly subtotal = computed(() =>
     this.cart().reduce((sum, i) => sum + i.price * i.quantity, 0)
   );
-  readonly tax = computed(() => Math.round(this.subtotal() * 0.1));
-  readonly grandTotal = computed(() => this.subtotal() + this.tax());
+  readonly discount = computed(() => Math.max(0, Number(this.discountAmount()) || 0));
+  readonly tax = computed(() => Math.round((this.subtotal() - this.discount()) * 0.1));
+  readonly grandTotal = computed(() => Math.max(0, this.subtotal() - this.discount() + this.tax()));
 
   readonly canConfirmPayment = computed(() => {
-    if (this.selectedPaymentMethod() === 'tien_mat') {
-      return this.receivedAmount >= this.grandTotal();
-    }
     return true;
   });
 
@@ -592,6 +624,10 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
 
   asStr(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  asNum(event: Event): number {
+    return Number((event.target as HTMLInputElement).value) || 0;
   }
 
   onSearchChange(q: string): void {
@@ -657,36 +693,78 @@ export class StaffTableWorkspaceComponent implements OnInit, OnDestroy {
     // Step 1: Create order
     this.api.createOrder(invId, items).subscribe({
       next: () => {
-        // Step 2: Create payment
-        this.api.createPayment(invId, this.grandTotal(), this.selectedPaymentMethod()).subscribe({
-          next: () => {
-            // Step 3: Reset table to trong
-            this.api.updateTableStatus(tableId, 'trong').subscribe({
-              next: () => {
-                this.checkoutLoading.set(false);
-                this.showCheckoutPopup.set(false);
-                this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
-              },
-              error: (err) => {
-                console.error('Failed to reset table status:', err);
-                this.checkoutLoading.set(false);
-                this.showCheckoutPopup.set(false);
-                // Payment was successful so still navigate back
-                this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
-              }
-            });
-          },
-          error: (err) => {
-            console.error('Payment failed:', err);
-            this.checkoutLoading.set(false);
-            this.checkoutError.set('Payment failed. Please try again.');
-          }
-        });
+        // Step 2: Always update invoice to calculate correct tong_tien (includes tax)
+        this.createPaymentAndFinish(invId, tableId);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Order creation failed:', err);
         this.checkoutLoading.set(false);
         this.checkoutError.set('Failed to save order. Please try again.');
+      }
+    });
+  }
+
+  private createPaymentAndFinish(invId: number, tableId: number): void {
+    // QUAN TRỌNG: Phải reload invoice để lấy tam_tinh (subtotal) chính xác từ backend
+    // Vì backend trigger tự động tính tam_tinh từ tất cả order items, không khớp với cart frontend
+    this.api.getInvoiceById(invId).subscribe({
+      next: (invoice) => {
+        const realSubtotal = invoice.subtotal;  // tam_tinh từ backend
+        const discount = this.discount();
+        const taxAmount = Math.round((realSubtotal - discount) * 0.1);  // Tính tax dựa trên subtotal thực
+        const correctTotal = realSubtotal - discount + taxAmount;  // Total chính xác
+        
+        // Workaround: Backend không có field tax, nên ta phải:
+        // adjustedDiscount = discount - tax để backend tính: tong_tien = subtotal - (discount - tax) = subtotal - discount + tax
+        const adjustedDiscount = discount - taxAmount;
+        const discountReason = discount > 0 
+          ? (this.discountReason() || `Discount: ${discount}, Tax: ${taxAmount}`)
+          : `Tax 10%: ${taxAmount}`;
+        
+        // Update invoice with adjusted discount that includes tax calculation
+        this.api.updateInvoiceDiscount(invId, tableId, adjustedDiscount, discountReason).subscribe({
+          next: () => {
+            // Step 3: Create payment with correct total
+            this.api.createPayment(
+              invId,
+              correctTotal,  // Dùng total tính từ backend subtotal
+              this.selectedPaymentMethod()
+            ).subscribe({
+              next: () => {
+                // Step 4: Reset table to trong
+                this.api.updateTableStatus(tableId, 'trong').subscribe({
+                  next: () => {
+                    this.checkoutLoading.set(false);
+                    this.showCheckoutPopup.set(false);
+                    this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
+                  },
+                  error: (err: any) => {
+                    console.error('Failed to reset table status:', err);
+                    this.checkoutLoading.set(false);
+                    this.showCheckoutPopup.set(false);
+                    // Payment was successful so still navigate back
+                    this.router.navigateByUrl('/staff/tables', { replaceUrl: true });
+                  }
+                });
+              },
+              error: (err: any) => {
+                console.error('Payment failed:', err);
+                this.checkoutLoading.set(false);
+                this.checkoutError.set('Payment failed. Please try again.');
+              }
+            });
+          },
+          error: (err: any) => {
+            console.error('Discount update failed:', err);
+            this.checkoutLoading.set(false);
+            this.checkoutError.set('Failed to apply discount. Please try again.');
+          }
+        });
+      },
+      error: (err: any) => {
+        console.error('Failed to load invoice:', err);
+        this.checkoutLoading.set(false);
+        this.checkoutError.set('Failed to load invoice data. Please try again.');
       }
     });
   }
