@@ -49,7 +49,6 @@ export class DashboardService {
       .pipe(map(r => r.data));
   }
 
-  // Dùng endpoint /page với size=1000 thay vì /ingredients
   getIngredients(): Observable<IngredientResponse[]> {
     return this.http
       .get<ApiResponse<PageResponse<IngredientResponse>>>(
