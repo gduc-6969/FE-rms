@@ -39,7 +39,7 @@ declare const Chart: any;
           <div class="stat-label">Revenue Today</div>
           <div class="stat-value">
             @if (loading()) { <mat-spinner diameter="24"/> }
-            @else { {{ summary().revenueToday | number:'1.0-0' }} ₫ }
+            @else { {{ '$' + (summary().revenueToday | number:'1.0-0') }} }
           </div>
         </div>
 
@@ -109,7 +109,7 @@ declare const Chart: any;
         </div>
 
         @if (inventoryAlerts().length === 0 && !loading()) {
-          <div class="no-alerts">Tất cả nguyên liệu đang ở mức an toàn</div>
+          <div class="no-alerts">All ingredients are at safe levels</div>
         } @else {
           <div class="alert-grid">
             @for (alert of inventoryAlerts(); track alert.id) {
