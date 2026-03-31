@@ -11,6 +11,14 @@ interface ApiResponse<T> {
   data: T;
 }
 
+export interface CreateStaffRequest {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  role?: Role;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StaffService {          
   private readonly http = inject(HttpClient);
@@ -28,6 +36,12 @@ export class StaffService {
   getById(id: number): Observable<UserResponse> {
     return this.http
       .get<ApiResponse<UserResponse>>(`${this.baseUrl}/${id}`)
+      .pipe(map(res => res.data));
+  }
+
+  createStaff(request: CreateStaffRequest): Observable<UserResponse> {
+    return this.http
+      .post<ApiResponse<UserResponse>>(this.baseUrl, request)
       .pipe(map(res => res.data));
   }
 
