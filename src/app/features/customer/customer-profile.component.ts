@@ -540,11 +540,45 @@ export class CustomerProfileComponent implements OnInit, OnDestroy {
       // Filter out nulls and ensure reservation belongs to current customer (phòng khi type string/number)
       const validReservations = results.filter((r): r is ReservationResponse => r !== null && Number(r.customerId) === customerId);
       
-      // Categorize into Active (cho_xac_nhan, da_xac_nhan, khach_den) and History (others)
-      const active = validReservations.filter(r =>
-        r.status === 'cho_xac_nhan' || r.status === 'da_xac_nhan' || r.status === 'khach_den'
-      );
-      const history = validReservations.filter(r => r.status === 'da_huy' || r.status === 'khach_khong_den');
+      const now = new Date();
+      
+      // Categorize into Active and History
+      // Active: pending/confirmed/seated AND reservation time is in the future or within last 3 hours
+      // History: cancelled, no-show, OR seated but past reservation time by more than 3 hours
+      const active = validReservations.filter(r => {
+        const reservationTime = new Date(r.reservationTime);
+        const hoursSinceReservation = (now.getTime() - reservationTime.getTime()) / (1000 * 60 * 60);
+        
+        // Cancelled or no-show → History
+        if (r.status === 'da_huy' || r.status === 'khach_khong_den') {
+          return false;
+        }
+        
+        // Seated but more than 3 hours past → History (likely completed/paid)
+        if (r.status === 'khach_den' && hoursSinceReservation > 3) {
+          return false;
+        }
+        
+        // Otherwise → Active
+        return true;
+      });
+      
+      const history = validReservations.filter(r => {
+        const reservationTime = new Date(r.reservationTime);
+        const hoursSinceReservation = (now.getTime() - reservationTime.getTime()) / (1000 * 60 * 60);
+        
+        // Explicitly cancelled or no-show
+        if (r.status === 'da_huy' || r.status === 'khach_khong_den') {
+          return true;
+        }
+        
+        // Seated but more than 3 hours past → considered completed
+        if (r.status === 'khach_den' && hoursSinceReservation > 3) {
+          return true;
+        }
+        
+        return false;
+      });
 
       // Sort by newest reservation time (descending)
       active.sort((a, b) => new Date(b.reservationTime).getTime() - new Date(a.reservationTime).getTime());
