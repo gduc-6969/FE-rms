@@ -6,17 +6,12 @@ import {
   computed
 } from '@angular/core';
 import { CurrencyPipe, CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MenuService } from '../../core/services/menu.service';
 import { CategoryResponse, MenuItemResponse } from '../../core/models/app.models';
-import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 const ALL_CATEGORY_ID = -1;
 
@@ -25,8 +20,8 @@ const ALL_CATEGORY_ID = -1;
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule,
-    MatIconModule, MatDialogModule, FormsModule, CurrencyPipe
+    MatCardModule, MatButtonModule,
+    MatIconModule, MatDialogModule, CurrencyPipe
   ],
   template: `
     <section class="menu-page">
@@ -35,28 +30,6 @@ const ALL_CATEGORY_ID = -1;
         <h1>Our Menu</h1>
         <p class="tagline">Seasonal ingredients, crafted with passion.</p>
       </header>
-
-      <!-- Search & Filter Row -->
-      <div class="search-row">
-        <div class="search-wrapper">
-          <mat-icon>search</mat-icon>
-          <input
-            type="text"
-            [(ngModel)]="keyword"
-            (ngModelChange)="onKeywordChange($event)"
-            placeholder="Search dishes, ingredients..."
-            class="search-input"
-          />
-        </div>
-        <button class="filter-btn" (click)="showFilters = !showFilters">
-          <mat-icon>tune</mat-icon>
-        </button>
-      </div>
-
-      <!-- Results Count -->
-      @if (keyword || selectedCategoryId() !== ALL_ID) {
-        <p class="results-count">{{ displayedItems().length }} items found</p>
-      }
 
       <!-- Loading state -->
       @if (isLoading()) {
@@ -126,7 +99,7 @@ const ALL_CATEGORY_ID = -1;
           @if (displayedItems().length === 0 && !isLoading()) {
             <div class="empty-state">
               <mat-icon>restaurant_menu</mat-icon>
-              <p>No dishes found matching your search.</p>
+              <p>No dishes found in this category.</p>
             </div>
           }
         </section>
@@ -147,7 +120,7 @@ const ALL_CATEGORY_ID = -1;
       /* Menu Header */
       .menu-header {
         text-align: center;
-        padding: 8px 0 16px;
+        padding: 8px 0 24px;
       }
 
       .menu-header h1 {
@@ -177,74 +150,6 @@ const ALL_CATEGORY_ID = -1;
         color: #A0A0A0;
         font-size: 15px;
         font-style: italic;
-      }
-
-      /* Search Row */
-      .search-row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-      }
-
-      .search-wrapper {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: #242424;
-        border: 1px solid #2C2C2C;
-        border-radius: 12px;
-        padding: 0 16px;
-        transition: all 0.2s ease;
-      }
-
-      .search-wrapper:focus-within {
-        border-color: #C5A028;
-        box-shadow: 0 0 0 3px rgba(197, 160, 40, 0.15);
-      }
-
-      .search-wrapper mat-icon {
-        color: #A0A0A0;
-      }
-
-      .search-input {
-        flex: 1;
-        background: transparent;
-        border: none;
-        outline: none;
-        color: #F0F0F0;
-        font-size: 15px;
-        padding: 14px 0;
-      }
-
-      .search-input::placeholder {
-        color: #A0A0A0;
-      }
-
-      .filter-btn {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        background: #242424;
-        border: 1px solid #2C2C2C;
-        color: #A0A0A0;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-      }
-
-      .filter-btn:hover {
-        border-color: #C5A028;
-        color: #C5A028;
-      }
-
-      /* Results Count */
-      .results-count {
-        margin: 0;
-        font-size: 14px;
-        color: #A0A0A0;
       }
 
       /* Loading State */
@@ -508,9 +413,6 @@ const ALL_CATEGORY_ID = -1;
 export class CustomerMenuComponent implements OnInit {
   readonly ALL_ID = ALL_CATEGORY_ID;
 
-  keyword = '';
-  showFilters = false;
-
   // Signals for state
   categories = signal<CategoryResponse[]>([]);
   allItems = signal<MenuItemResponse[]>([]);
@@ -518,24 +420,12 @@ export class CustomerMenuComponent implements OnInit {
   loadError = signal(false);
   selectedCategoryId = signal<number>(ALL_CATEGORY_ID);
 
-  // Search subject for debounce
-  private readonly searchSubject = new Subject<string>();
-
-  // Items shown after keyword/category filter (client-side)
+  // Items shown after category filter
   readonly displayedItems = computed(() => {
-    const kw = this.keyword.trim().toLowerCase();
     const catId = this.selectedCategoryId();
-    let items = catId === ALL_CATEGORY_ID
+    return catId === ALL_CATEGORY_ID
       ? this.allItems()
       : this.allItems().filter(i => i.categoryId === catId);
-
-    if (kw) {
-      items = items.filter(i =>
-        i.name.toLowerCase().includes(kw) ||
-        i.categoryName.toLowerCase().includes(kw)
-      );
-    }
-    return items;
   });
 
   constructor(
@@ -583,10 +473,6 @@ export class CustomerMenuComponent implements OnInit {
 
   countByCategory(categoryId: number): number {
     return this.allItems().filter(i => i.categoryId === categoryId).length;
-  }
-
-  onKeywordChange(value: string): void {
-    this.keyword = value;
   }
 
   openDetails(item: MenuItemResponse): void {
