@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -6,8 +7,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { DiningTable, TableStatus } from '../../core/models/app.models';
-import { MockDataService } from '../../core/services/mock-data.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TableService } from '../../core/services/table.service';
+import { TableResponse, TableStatus, TABLE_STATUS_OPTIONS, TABLE_STATUS_LABELS } from '../../core/models/table.models';
 
 @Component({
   selector: 'app-table-management',
@@ -19,7 +21,8 @@ import { MockDataService } from '../../core/services/mock-data.service';
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule
+    MatSelectModule,
+    MatProgressSpinnerModule
   ],
   template: `
     <section class="rms-page">
@@ -42,8 +45,8 @@ import { MockDataService } from '../../core/services/mock-data.service';
           <mat-card-content>
             <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
               <mat-form-field appearance="outline">
-                <mat-label>Table Name</mat-label>
-                <input matInput formControlName="name" />
+                <mat-label>Table Code</mat-label>
+                <input matInput formControlName="tableCode" placeholder="e.g. T01, T02" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -52,74 +55,86 @@ import { MockDataService } from '../../core/services/mock-data.service';
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Area</mat-label>
-                <input matInput formControlName="area" />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
                 <mat-label>Status</mat-label>
                 <mat-select formControlName="status">
-                  <mat-option value="available">Available</mat-option>
-                  <mat-option value="serving">Serving</mat-option>
-                  <mat-option value="pending-payment">Pending Payment</mat-option>
-                  <mat-option value="disabled">Disabled</mat-option>
+                  @for (opt of statusOptions; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
                 </mat-select>
               </mat-form-field>
 
               <div class="form-actions">
                 <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
-                <button class="btn-add" type="submit" [disabled]="form.invalid">Save</button>
+                <button class="btn-add" type="submit" [disabled]="form.invalid || saving()">
+                  @if (saving()) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else {
+                    Save
+                  }
+                </button>
               </div>
             </form>
           </mat-card-content>
         </mat-card>
       }
 
-      <!-- Stats Row -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Total Tables</div>
-          <div class="stat-value">{{ tables().length }}</div>
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="48"></mat-spinner>
+          <span>Loading tables...</span>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Total Capacity</div>
-          <div class="stat-value">{{ totalCapacity() }} <span class="stat-unit">Seats</span></div>
-        </div>
-      </div>
-
-      <!-- Table Grid -->
-      <div class="table-grid">
-        @for (table of tables(); track table.id) {
-          <div class="table-card">
-            <!-- Table icon circle -->
-            <div class="table-icon">
-              <span class="table-abbr">{{ abbr(table.name) }}</span>
-            </div>
-
-            <!-- Info -->
-            <div class="table-info">
-              <div class="info-row">
-                <mat-icon class="info-icon">people</mat-icon>
-                <span class="info-text accent">{{ table.capacity }} Seats</span>
-              </div>
-              <div class="info-row">
-                <mat-icon class="info-icon location">location_on</mat-icon>
-                <span class="info-text">{{ table.area }}</span>
-              </div>
-            </div>
-
-            <!-- Hover actions -->
-            <div class="card-actions">
-              <button class="action-btn edit" (click)="startEdit(table)" title="Edit">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button class="action-btn delete" (click)="remove(table.id)" title="Delete">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
+      } @else {
+        <!-- Stats Row -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Tables</div>
+            <div class="stat-value">{{ tables().length }}</div>
           </div>
-        }
-      </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Capacity</div>
+            <div class="stat-value">{{ totalCapacity() }} <span class="stat-unit">Seats</span></div>
+          </div>
+        </div>
+
+        <!-- Table Grid -->
+        <div class="table-grid">
+          @for (table of tables(); track table.id) {
+            <div class="table-card" [class.status-available]="table.status === 'trong'"
+                 [class.status-reserved]="table.status === 'da_dat'"
+                 [class.status-serving]="table.status === 'dang_phuc_vu'"
+                 [class.status-maintenance]="table.status === 'bao_tri'">
+              <!-- Table icon circle -->
+              <div class="table-icon">
+                <span class="table-abbr">{{ abbr(table.tableCode) }}</span>
+              </div>
+
+              <!-- Info -->
+              <div class="table-info">
+                <div class="table-name">{{ table.tableCode }}</div>
+                <div class="info-row">
+                  <mat-icon class="info-icon">people</mat-icon>
+                  <span class="info-text accent">{{ table.capacity }} Seats</span>
+                </div>
+                <div class="status-badge" [class]="'status-' + table.status">
+                  {{ getStatusLabel(table.status) }}
+                </div>
+              </div>
+
+              <!-- Hover actions -->
+              <div class="card-actions">
+                <button class="action-btn edit" (click)="startEdit(table)" title="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button class="action-btn delete" (click)="remove(table.id)" title="Delete">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <div class="no-data">No tables found. Click "Add New Table" to create one.</div>
+          }
+        </div>
+      }
 
     </section>
   `,
@@ -286,8 +301,13 @@ import { MockDataService } from '../../core/services/mock-data.service';
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       width: 100%;
+    }
+    .table-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
     }
     .info-row {
       display: flex;
@@ -302,13 +322,38 @@ import { MockDataService } from '../../core/services/mock-data.service';
       line-height: 1;
       color: var(--accent);
     }
-    .info-icon.location { color: var(--accent); }
     .info-text {
       font-size: 13px;
       color: var(--muted);
       font-weight: 500;
     }
     .info-text.accent { color: var(--accent); font-weight: 600; }
+
+    /* ── Status badge ── */
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-badge.status-trong { background: #dcfce7; color: #15803d; }
+    .status-badge.status-da_dat { background: #fef3c7; color: #b45309; }
+    .status-badge.status-dang_phuc_vu { background: #dbeafe; color: #1d4ed8; }
+    .status-badge.status-bao_tri { background: #fee2e2; color: #b91c1c; }
+
+    /* ── Loading ── */
+    .loading-container {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; padding: 60px 0; color: var(--muted);
+    }
+
+    .no-data {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
 
     /* ── Hover action buttons ── */
     .card-actions {
@@ -349,87 +394,130 @@ import { MockDataService } from '../../core/services/mock-data.service';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TableManagementComponent {
-  private readonly mockData = inject(MockDataService);
+export class TableManagementComponent implements OnInit {
+  private readonly tableService = inject(TableService);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
-  readonly tables = signal<DiningTable[]>(this.mockData.getDiningTables());
+  readonly tables = signal<TableResponse[]>([]);
   readonly editingTableId = signal<number | null>(null);
+  readonly loading = signal(true);
+  readonly saving = signal(false);
+
+  readonly statusOptions = TABLE_STATUS_OPTIONS;
 
   readonly form = this.fb.nonNullable.group({
-    name:     ['', [Validators.required]],
-    capacity: [4, [Validators.required, Validators.min(1)]],
-    area:     ['', [Validators.required]],
-    status:   ['available' as TableStatus, [Validators.required]]
+    tableCode: ['', [Validators.required, Validators.maxLength(10)]],
+    capacity:  [4, [Validators.required, Validators.min(1)]],
+    status:    ['trong' as TableStatus, [Validators.required]]
   });
 
   readonly totalCapacity = computed(() =>
     this.tables().reduce((sum, t) => sum + t.capacity, 0)
   );
 
-  /** Extract abbreviation: "Table 1" → "T1", "T2" → "T2" */
-  abbr(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  ngOnInit(): void {
+    this.loadTables();
+  }
+
+  private loadTables(): void {
+    this.loading.set(true);
+    this.tableService.getAllTables()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.tables.set(data || []);
+          this.loading.set(false);
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('Error loading tables:', err);
+          this.loading.set(false);
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  /** Extract abbreviation: "T01" → "T01", "Table 1" → "T1" */
+  abbr(code: string): string {
+    if (!code) return '?';
+    const clean = code.trim();
+    if (clean.length <= 3) return clean.toUpperCase();
+    const parts = clean.split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1]).toUpperCase().slice(0, 3);
+  }
+
+  getStatusLabel(status: TableStatus): string {
+    return TABLE_STATUS_LABELS[status] || status;
   }
 
   startCreate(): void {
     this.editingTableId.set(0);
-    this.form.reset({ name: '', capacity: 4, area: '', status: 'available' });
+    this.form.reset({ tableCode: '', capacity: 4, status: 'trong' });
   }
 
-  startEdit(table: DiningTable): void {
+  startEdit(table: TableResponse): void {
     this.editingTableId.set(table.id);
     this.form.reset({
-      name: table.name, capacity: table.capacity,
-      area: table.area, status: table.status
+      tableCode: table.tableCode,
+      capacity: table.capacity,
+      status: table.status
     });
   }
 
   save(): void {
     if (this.form.invalid || this.editingTableId() === null) return;
 
-    const id  = this.editingTableId()!;
+    const id = this.editingTableId()!;
     const raw = this.form.getRawValue();
+    const request = {
+      tableCode: raw.tableCode,
+      capacity: Number(raw.capacity),
+      status: raw.status
+    };
 
-    if (id === 0) {
-      const nextId = Math.max(...this.tables().map(t => t.id), 0) + 1;
-      this.tables.update(items => [
-        { id: nextId, name: raw.name, capacity: Number(raw.capacity),
-          area: raw.area, status: raw.status, guests: 0, elapsedMinutes: 0 },
-        ...items
-      ]);
-    } else {
-      this.tables.update(items =>
-        items.map(item =>
-          item.id === id
-            ? { ...item, name: raw.name, capacity: Number(raw.capacity),
-                area: raw.area, status: raw.status }
-            : item
-        )
-      );
-    }
-    this.cancel();
+    this.saving.set(true);
+
+    const operation$ = id === 0
+      ? this.tableService.createTable(request)
+      : this.tableService.updateTable(id, request);
+
+    operation$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.cancel();
+          this.loadTables();
+        },
+        error: (err) => {
+          console.error('Error saving table:', err);
+          this.saving.set(false);
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   remove(id: number): void {
-    this.tables.update(items => items.filter(i => i.id !== id));
-    if (this.editingTableId() === id) this.cancel();
+    if (!confirm('Are you sure you want to delete this table?')) return;
+
+    this.tableService.deleteTable(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          if (this.editingTableId() === id) this.cancel();
+          this.loadTables();
+        },
+        error: (err) => {
+          console.error('Error deleting table:', err);
+        }
+      });
   }
 
   cancel(): void {
     this.editingTableId.set(null);
-    this.form.reset({ name: '', capacity: 4, area: '', status: 'available' });
-  }
-
-  statusLabel(status: TableStatus): string {
-    const map: Record<TableStatus, string> = {
-      'available': 'Available',
-      'serving': 'Serving',
-      'pending-payment': 'Pending Payment',
-      'disabled': 'Disabled'
-    };
-    return map[status] ?? status;
+    this.form.reset({ tableCode: '', capacity: 4, status: 'trong' });
   }
 }
